@@ -30,19 +30,23 @@ find_program(CLANG_FORMAT NAMES clang-format-20 clang-format REQUIRED)
 add_executable(namesgen namesgen.cpp)
 
 # Generate include/cedilla/cp_to_name.hpp in the build directory.
-# The file is: <compressed tables from namesgen> + <runtime lookup from src/names.hpp>
+# The file is: <compressed tables from namesgen> + <runtime lookup from names.hpp>
 add_custom_command(
     COMMENT "Generating include/cedilla/cp_to_name.hpp"
     OUTPUT  ${HEADERS_DIR}/cp_to_name.hpp
     COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
-    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/cp_to_name.hpp
-    COMMAND ${CMAKE_COMMAND} -E cat
-            ${PROJECT_SOURCE_DIR}/src/names.hpp >> ${HEADERS_DIR}/cp_to_name.hpp
+    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/cp_to_name.gen
+    COMMAND ${CMAKE_COMMAND}
+            -DTEMPLATE=${PROJECT_SOURCE_DIR}/names.hpp
+            -DINSERT=${HEADERS_DIR}/cp_to_name.gen
+            -DOUTPUT=${HEADERS_DIR}/cp_to_name.hpp
+            -P ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
     COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/cp_to_name.hpp
     DEPENDS
         ${UCD_FILE}
         namesgen
-        ${PROJECT_SOURCE_DIR}/src/names.hpp
+        ${PROJECT_SOURCE_DIR}/names.hpp
+        ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
 )
 
 add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/cp_to_name.hpp)
