@@ -14,7 +14,64 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char **argv) {
+enum struct line_result {
+    skipped = 0,
+    success = 1,
+    failure = -1,
+};
+
+[[nodiscard]]
+line_result test_line(const std::string_view line) {
+    if (line.empty()) {
+        return line_result::skipped;
+    }
+
+    // Field 0: codepoint (hex)
+    const auto semi_index_1 = line.find(';');
+    if (semi_index_1 == std::string::npos) {
+        return line_result::skipped;
+    }
+
+    // Field 1: character name
+    auto semi_index_2 = line.find(';', semi_index_1 + 1);
+    if (semi_index_2 == std::string::npos)
+        semi_index_2 = line.size();
+
+    const std::string_view name(line.data() + semi_index_1 + 1, semi_index_2 - semi_index_1 - 1);
+
+    uint32_t code = 0;
+    const auto [p, ec] = std::from_chars(line.data(), line.data() + semi_index_1, code, 16);
+    if (ec != std::errc{}) {
+        return line_result::skipped;
+    }
+
+    const std::string got = uni::code_point_name(char32_t(code));
+
+    // Range markers (<... , First>/<... , Last>) represent algorithmically-
+    // named blocks and are validated in dedicated spot checks below.
+    const bool has_angle_bracket_prefix = name.starts_with('<');
+    const bool is_range_marker =
+        has_angle_bracket_prefix && (name.ends_with(", First>") || name.ends_with(", Last>"));
+    const bool is_nameless_entry = name.empty() || (has_angle_bracket_prefix && !is_range_marker);
+
+    // Names starting with '<' are range markers or formal-name-less entries.
+    if (name.empty() || has_angle_bracket_prefix) {
+        if (is_nameless_entry && !got.empty()) {
+            std::cout << "UNEXPECTED-NAME U+" << std::string(line.data(), semi_index_1)
+                      << "  expected empty  got='" << got << "'\n";
+            return line_result::failure;
+        }
+        return line_result::success;
+    }
+    if (got != name) {
+        std::cout << "FAIL U+" << std::string(line.data(), semi_index_1) << "  expected='" << name
+                  << "'  got='" << got << "'\n";
+        return line_result::failure;
+    }
+    return line_result::success;
+}
+
+int main(const int argc, const char *const *const argv) {
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <path/to/UnicodeData.txt>\n";
         return 1;
@@ -31,52 +88,20 @@ int main(int argc, char **argv) {
     std::string line;
 
     while (std::getline(f, line)) {
-        if (line.empty())
+        switch (test_line(line)) {
+        case line_result::skipped: {
             continue;
-
-        // Field 0: codepoint (hex)
-        auto semi1 = line.find(';');
-        if (semi1 == std::string::npos)
-            continue;
-
-        // Field 1: character name
-        auto semi2 = line.find(';', semi1 + 1);
-        if (semi2 == std::string::npos)
-            semi2 = line.size();
-
-        std::string_view name(line.data() + semi1 + 1, semi2 - semi1 - 1);
-
-        uint32_t code = 0;
-        auto [p, ec] = std::from_chars(line.data(), line.data() + semi1, code, 16);
-        if (ec != std::errc{})
-            continue;
-
-        const auto got = uni::cp_name(char32_t(code));
-
-        // Range markers (<... , First>/<... , Last>) represent algorithmically-
-        // named blocks and are validated in dedicated spot checks below.
-        const bool has_angle_bracket_prefix = name.starts_with('<');
-        const bool is_range_marker =
-            has_angle_bracket_prefix && (name.ends_with(", First>") || name.ends_with(", Last>"));
-        const bool is_nameless_entry =
-            name.empty() || (has_angle_bracket_prefix && !is_range_marker);
-
-        // Names starting with '<' are range markers or formal-name-less entries.
-        if (name.empty() || has_angle_bracket_prefix) {
-            if (is_nameless_entry && !got.empty()) {
-                std::cout << "UNEXPECTED-NAME U+" << std::string(line.data(), semi1)
-                          << "  expected empty  got='" << got << "'\n";
-                ++failed;
-            }
+        }
+        case line_result::success: {
             ++checked;
             continue;
         }
-        if (got != name) {
-            std::cout << "FAIL U+" << std::string(line.data(), semi1) << "  expected='" << name
-                      << "'  got='" << got << "'\n";
+        case line_result::failure: {
+            ++checked;
             ++failed;
+            continue;
         }
-        ++checked;
+        }
     }
 
     // Spot-check algorithmically-named blocks that appear only as range markers
@@ -85,7 +110,7 @@ int main(int argc, char **argv) {
         char32_t cp;
         const char *expected;
     };
-    constexpr spot spots[] = {
+    static constexpr spot spots[] = {
         {0xAC00, "HANGUL SYLLABLE GA"},
         {0xAC01, "HANGUL SYLLABLE GAG"},
         {0xD7A3, "HANGUL SYLLABLE HIH"},
@@ -104,7 +129,7 @@ int main(int argc, char **argv) {
         {0xE01EF, "VARIATION SELECTOR-256"},
     };
     for (const auto &s : spots) {
-        const auto got = uni::cp_name(s.cp);
+        const auto got = uni::code_point_name(s.cp);
         if (got != s.expected) {
             std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
                       << s.expected << "'  got='" << got << "'\n";

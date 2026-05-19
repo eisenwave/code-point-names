@@ -21,17 +21,18 @@ namespace uni {
 
 namespace details {
 
-template <class ForwardIt, class T, class Compare>
-constexpr ForwardIt upper_bound(ForwardIt first, ForwardIt last, const T &value, Compare comp) {
-    ForwardIt it = first;
-    typename std::iterator_traits<ForwardIt>::difference_type count = std::distance(first, last);
-    typename std::iterator_traits<ForwardIt>::difference_type step = count / 2;
+[[nodiscard]] constexpr const unsigned long long *upper_bound(const unsigned long long *first,
+                                                              const unsigned long long *const last,
+                                                              const char32_t value) {
+    const unsigned long long *it = first;
+    auto count = last - first;
+    auto step = count / 2;
 
     while (count > 0) {
         it = first;
         step = count / 2;
-        std::advance(it, step);
-        if (!comp(value, *it)) {
+        it += step;
+        if (value >= std::uint32_t(*it >> 32)) {
             first = ++it;
             count -= step + 1;
         } else
@@ -49,7 +50,7 @@ struct name_view {
         using value_type = char;
         using iterator_category = std::forward_iterator_tag;
 
-        constexpr iterator(char32_t c) : m_c(c), m_block(-1) { get_next_segment(); }
+        constexpr iterator(const char32_t c) : m_c(c), m_block(-1) { get_next_segment(); }
         constexpr char32_t operator*() const { return char32_t(m_str[m_str_pos]); }
 
         constexpr iterator &operator++(int) {
@@ -86,11 +87,7 @@ struct name_view {
                 }
 
                 const auto end = range.end;
-                auto it = upper_bound(range.begin, end, m_c,
-                                      [](const char32_t cp, const std::uint64_t v) {
-                                          char32_t c = (v >> 32) & 0x00000000FFFFFFFF;
-                                          return cp < c;
-                                      });
+                auto it = upper_bound(range.begin, end, m_c);
                 if (it == end || it == range.begin) {
                     m_block = -2;
                     return;
@@ -125,13 +122,14 @@ struct name_view {
         std::int8_t m_chunk_pos = -1;
     };
 
-    constexpr iterator begin() const { return iterator{c}; }
-    constexpr sentinel end() const { return {}; }
+    [[nodiscard]] constexpr iterator begin() const { return iterator{c}; }
+    [[nodiscard]] constexpr sentinel end() const { return {}; }
 
-    std::string to_string() const {
+    [[nodiscard]] std::string to_string() const {
         std::string s;
-        for (auto c : *this)
+        for (auto c : *this) {
             s.push_back(c);
+        }
         return s;
     }
 
@@ -151,15 +149,15 @@ constexpr const char *hangul_t[] = {"",   "G",  "GG", "GS", "N",  "NJ", "NH", "D
 
 struct generated_range {
     const char *prefix;
-    uint32_t lo, hi;
+    std::uint32_t lo, hi;
 };
 struct decimal_range {
     const char *prefix;
-    uint32_t lo, hi, base;
+    std::uint32_t lo, hi, base;
     int width;
 };
 
-// All algorithmically-named blocks in Unicode 14 (prefix + uppercase hex, min 4 digits).
+// All algorithmically named blocks in Unicode 14 (prefix + uppercase hex, min 4 digits).
 constexpr generated_range algorithmic_ranges[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400u, 0x4DBFu},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00u, 0x9FFFu},
@@ -177,7 +175,7 @@ constexpr generated_range algorithmic_ranges[] = {
     {"CJK COMPATIBILITY IDEOGRAPH-", 0x2F800u, 0x2FA1Du},
 };
 
-// Algorithmically-named blocks whose suffix is a decimal number.
+// Algorithmically named blocks whose suffix is a decimal number.
 // base  = value of the first codepoint in the range
 // width = minimum digit count (zero-padded)
 constexpr decimal_range decimal_ranges[] = {
@@ -186,10 +184,10 @@ constexpr decimal_range decimal_ranges[] = {
     {"VARIATION SELECTOR-", 0xE0100u, 0xE01EFu, 0xE0100u - 16, 1}, // 17-256
 };
 
-inline std::string format_cp_decimal(uint32_t n, int width) {
+inline std::string format_cp_decimal(const std::uint32_t n, const int width) {
     char buf[10];
     int len = 0;
-    uint32_t v = n;
+    std::uint32_t v = n;
     do {
         buf[len++] = char('0' + v % 10);
         v /= 10;
@@ -202,11 +200,11 @@ inline std::string format_cp_decimal(uint32_t n, int width) {
     return s;
 }
 
-inline std::string format_cp_hex(uint32_t cp) {
+inline std::string format_cp_hex(const uint32_t code_point) {
     constexpr const char *hex = "0123456789ABCDEF";
     char buf[6];
     int n = 0;
-    uint32_t v = cp;
+    uint32_t v = code_point;
     do {
         buf[n++] = hex[v & 0xF];
         v >>= 4;
@@ -229,15 +227,21 @@ inline std::string code_point_name(char32_t cp) {
         return std::string("HANGUL SYLLABLE ") + details::hangul_l[si / NCount] +
                details::hangul_v[(si % NCount) / TCount] + details::hangul_t[si % TCount];
     }
+
     // Algorithmically-named blocks: prefix + uppercase hex codepoint
-    for (const auto &r : details::algorithmic_ranges)
-        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi)
+    for (const auto &r : details::algorithmic_ranges) {
+        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi) {
             return std::string(r.prefix) + details::format_cp_hex(uint32_t(cp));
+        }
+    }
+
     // Algorithmically-named blocks: prefix + decimal number
-    for (const auto &r : details::decimal_ranges)
-        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi)
+    for (const auto &r : details::decimal_ranges) {
+        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi) {
             return std::string(r.prefix) +
                    details::format_cp_decimal(uint32_t(cp) - r.base + 1, r.width);
+        }
+    }
     // Compressed dictionary lookup
     return details::name_view(cp).to_string();
 }
