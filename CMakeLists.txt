@@ -36,7 +36,9 @@ set_target_properties(namesgen PROPERTIES CXX_EXTENSIONS OFF)
 # Generate include/get_code_point_name.hpp in the build directory.
 # The file is: <compressed tables from namesgen> + <runtime lookup from names.hpp>
 if(CLANG_FORMAT)
-    set(_fmt_command COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/get_code_point_name.hpp)
+    set(_fmt_command COMMAND ${CLANG_FORMAT}
+            --style=file:${PROJECT_SOURCE_DIR}/.clang-format
+            -i ${HEADERS_DIR}/get_code_point_name.hpp)
 endif()
 # In top-level builds, copy the result back into include/ so developers
 # don't have to do it manually after changing names.hpp or namesgen.cpp.
