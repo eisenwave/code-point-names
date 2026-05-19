@@ -1,25 +1,25 @@
-#pragma once
+#ifndef CODE_POINT_TO_NAME_HPP
+#define CODE_POINT_TO_NAME_HPP
+
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <string_view>
 
-struct __name_table_range {
+namespace uni {
+namespace details {
+
+struct name_table_range {
     const unsigned long long *begin;
     const unsigned long long *end;
 };
 
 // These forward declarations are here so we can view this file without getting linter errors.
-extern const char __name_dict[];
-constexpr __name_table_range __get_table_index(std::size_t); // NOLINT
-extern const unsigned long long __name_indexes[];
-constexpr std::string_view __get_name_segment(std::size_t b, std::size_t idx); // NOLINT
+extern const char name_dict[];                                               // NOLINT
+constexpr name_table_range get_table_index(std::size_t);                     // NOLINT
+extern const unsigned long long name_indexes[];                              // NOLINT
+constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // NOLINT
 
 // AUTO-GENERATED CODE HERE
-
-namespace uni {
-
-namespace details {
 
 [[nodiscard]] constexpr const unsigned long long *upper_bound(const unsigned long long *first,
                                                               const unsigned long long *const last,
@@ -80,7 +80,7 @@ struct name_view {
       private:
         constexpr void get_next_segment() {
             if (m_chunk_pos >= 3 || m_block == -1) {
-                const __name_table_range range = __get_table_index(std::size_t(++m_block));
+                const name_table_range range = get_table_index(std::size_t(++m_block));
                 if (range.begin == nullptr) {
                     m_block = -2;
                     return;
@@ -99,7 +99,7 @@ struct name_view {
                     return;
                 }
                 auto offset = m_c - char32_t((*it) >> 32);
-                m_chunk = __name_indexes[start + offset];
+                m_chunk = name_indexes[start + offset];
                 m_chunk_pos = -1;
             }
             m_chunk_pos++;
@@ -110,7 +110,7 @@ struct name_view {
             }
             std::uint8_t dict = data >> 8;
             std::uint8_t entry = data & 0x00ff;
-            m_str = __get_name_segment(dict, entry);
+            m_str = get_name_segment(dict, entry);
             m_str_pos = 0;
         }
 
@@ -125,12 +125,9 @@ struct name_view {
     [[nodiscard]] constexpr iterator begin() const { return iterator{c}; }
     [[nodiscard]] constexpr sentinel end() const { return {}; }
 
-    [[nodiscard]] std::string to_string() const {
-        std::string s;
-        for (auto c : *this) {
-            s.push_back(c);
-        }
-        return s;
+    void write_to(char *out, std::size_t &len) const {
+        for (const char c : *this)
+            out[len++] = c;
     }
 
   private:
@@ -147,7 +144,7 @@ constexpr const char *hangul_t[] = {"",   "G",  "GG", "GS", "N",  "NJ", "NH", "D
                                     "LM", "LB", "LS", "LT", "LP", "LH", "M",  "B", "BS", "S",
                                     "SS", "NG", "J",  "C",  "K",  "T",  "P",  "H"};
 
-struct generated_range {
+struct algorithmic_range {
     const char *prefix;
     std::uint32_t lo, hi;
 };
@@ -158,7 +155,7 @@ struct decimal_range {
 };
 
 // All algorithmically named blocks in Unicode 14 (prefix + uppercase hex, min 4 digits).
-constexpr generated_range algorithmic_ranges[] = {
+constexpr algorithmic_range algorithmic_ranges[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400u, 0x4DBFu},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00u, 0x9FFFu},
     {"CJK UNIFIED IDEOGRAPH-", 0x20000u, 0x2A6DFu},
@@ -184,66 +181,103 @@ constexpr decimal_range decimal_ranges[] = {
     {"VARIATION SELECTOR-", 0xE0100u, 0xE01EFu, 0xE0100u - 16, 1}, // 17-256
 };
 
-inline std::string format_cp_decimal(const std::uint32_t n, const int width) {
-    char buf[10];
-    int len = 0;
+[[nodiscard]] inline std::size_t format_decimal_zero_padded(const std::uint32_t n, const int width,
+                                                            char *const out) {
+    char tmp[10];
+    int tmp_length = 0;
     std::uint32_t v = n;
     do {
-        buf[len++] = char('0' + v % 10);
+        tmp[tmp_length++] = char('0' + v % 10);
         v /= 10;
     } while (v);
-    while (len < width)
-        buf[len++] = '0';
-    std::string s(len, '\0');
-    for (int i = 0; i < len; ++i)
-        s[i] = buf[len - 1 - i];
-    return s;
+    while (tmp_length < width) {
+        tmp[tmp_length++] = '0';
+    }
+    std::size_t length = 0;
+    for (int i = tmp_length - 1; i >= 0; --i) {
+        out[length++] = tmp[i];
+    }
+    return length;
 }
 
-inline std::string format_cp_hex(const uint32_t code_point) {
+[[nodiscard]] inline std::size_t format_hex(const std::uint32_t code_point, char *const out) {
     constexpr const char *hex = "0123456789ABCDEF";
-    char buf[6];
+    char tmp[6];
     int n = 0;
-    uint32_t v = code_point;
+    std::uint32_t v = code_point;
     do {
-        buf[n++] = hex[v & 0xF];
+        tmp[n++] = hex[v & 0xF];
         v >>= 4;
     } while (v);
-    while (n < 4)
-        buf[n++] = '0';
-    std::string s(n, '\0');
-    for (int i = 0; i < n; ++i)
-        s[i] = buf[n - 1 - i];
-    return s;
+    while (n < 4) {
+        tmp[n++] = '0';
+    }
+    std::size_t length = 0;
+    for (int i = n - 1; i >= 0; --i) {
+        out[length++] = tmp[i];
+    }
+    return length;
 }
 
 } // namespace details
 
-inline std::string code_point_name(char32_t cp) {
+// Maximum number of characters in any Unicode 14 code point name
+// (including algorithmically derived names). Size output buffers accordingly.
+inline constexpr std::size_t cp_name_max_length = 96;
+
+// If `cp` has a code point name,
+// appends that name to `out`,
+// and return the name length.
+// Otherwise, `out` is unmodified, and `0` is returned.
+[[nodiscard]] inline std::size_t code_point_name(const char32_t cp, char *const out) {
+    std::size_t length = 0;
     // Hangul syllables: algorithmic decomposition (Unicode § 3.12)
     if (cp >= char32_t(0xAC00) && cp <= char32_t(0xD7A3)) {
-        constexpr uint32_t TCount = 28u, NCount = 21u * 28u;
-        uint32_t si = uint32_t(cp) - 0xAC00u;
-        return std::string("HANGUL SYLLABLE ") + details::hangul_l[si / NCount] +
-               details::hangul_v[(si % NCount) / TCount] + details::hangul_t[si % TCount];
+        constexpr std::uint32_t TCount = 28u, NCount = 21u * 28u;
+        const std::uint32_t si = std::uint32_t(cp) - 0xAC00u;
+        for (const char *p = "HANGUL SYLLABLE "; *p; ++p) {
+            out[length++] = *p;
+        }
+        for (const char *p = details::hangul_l[si / NCount]; *p; ++p) {
+            out[length++] = *p;
+        }
+        for (const char *p = details::hangul_v[(si % NCount) / TCount]; *p; ++p) {
+            out[length++] = *p;
+        }
+        for (const char *p = details::hangul_t[si % TCount]; *p; ++p) {
+            out[length++] = *p;
+        }
+        return length;
     }
 
     // Algorithmically-named blocks: prefix + uppercase hex codepoint
-    for (const auto &r : details::algorithmic_ranges) {
-        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi) {
-            return std::string(r.prefix) + details::format_cp_hex(uint32_t(cp));
+    for (const details::algorithmic_range &r : details::algorithmic_ranges) {
+        if (std::uint32_t(cp) >= r.lo && std::uint32_t(cp) <= r.hi) {
+            for (const char *p = r.prefix; *p; ++p) {
+                out[length++] = *p;
+            }
+            length += details::format_hex(std::uint32_t(cp), out + length);
+            return length;
         }
     }
 
     // Algorithmically-named blocks: prefix + decimal number
-    for (const auto &r : details::decimal_ranges) {
-        if (uint32_t(cp) >= r.lo && uint32_t(cp) <= r.hi) {
-            return std::string(r.prefix) +
-                   details::format_cp_decimal(uint32_t(cp) - r.base + 1, r.width);
+    for (const details::decimal_range &r : details::decimal_ranges) {
+        if (std::uint32_t(cp) >= r.lo && std::uint32_t(cp) <= r.hi) {
+            for (const char *p = r.prefix; *p; ++p) {
+                out[length++] = *p;
+            }
+            length += details::format_decimal_zero_padded(std::uint32_t(cp) - r.base + 1, r.width,
+                                                           out + length);
+            return length;
         }
     }
+
     // Compressed dictionary lookup
-    return details::name_view(cp).to_string();
+    details::name_view(cp).write_to(out, length);
+    return length;
 }
 
 } // namespace uni
+
+#endif // CODE_POINT_TO_NAME_HPP

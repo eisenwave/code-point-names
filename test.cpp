@@ -45,7 +45,9 @@ line_result test_line(const std::string_view line) {
         return line_result::skipped;
     }
 
-    const std::string got = uni::code_point_name(char32_t(code));
+    char got_buf[uni::cp_name_max_length];
+    const std::size_t got_len = uni::code_point_name(char32_t(code), got_buf);
+    const std::string_view got(got_buf, got_len);
 
     // Range markers (<... , First>/<... , Last>) represent algorithmically-
     // named blocks and are validated in dedicated spot checks below.
@@ -69,6 +71,46 @@ line_result test_line(const std::string_view line) {
         return line_result::failure;
     }
     return line_result::success;
+}
+
+void test_algorithmic(int &checked, int &failed) {
+    // Spot-check algorithmically-named blocks that appear only as range markers
+    // in UnicodeData.txt and are therefore not covered by the loop above.
+    struct spot {
+        char32_t cp;
+        const char *expected;
+    };
+
+    static constexpr spot spots[] = {
+        {0xAC00, "HANGUL SYLLABLE GA"},
+        {0xAC01, "HANGUL SYLLABLE GAG"},
+        {0xD7A3, "HANGUL SYLLABLE HIH"},
+        {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00"},
+        {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF"},
+        {0x3400, "CJK UNIFIED IDEOGRAPH-3400"},
+        {0x17000, "TANGUT IDEOGRAPH-17000"},
+        {0x187F7, "TANGUT IDEOGRAPH-187F7"},
+        // Tangut Components (decimal-suffix, 3-digit zero-padded)
+        {0x18800, "TANGUT COMPONENT-001"},
+        {0x18AFF, "TANGUT COMPONENT-768"},
+        // Variation Selectors (decimal-suffix)
+        {0xFE00, "VARIATION SELECTOR-1"},
+        {0xFE0F, "VARIATION SELECTOR-16"},
+        {0xE0100, "VARIATION SELECTOR-17"},
+        {0xE01EF, "VARIATION SELECTOR-256"},
+    };
+
+    for (const auto &s : spots) {
+        char got_buf[uni::cp_name_max_length];
+        const std::size_t got_len = uni::code_point_name(s.cp, got_buf);
+        const std::string_view got(got_buf, got_len);
+        if (got != s.expected) {
+            std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
+                      << s.expected << "'  got='" << got << "'\n";
+            ++failed;
+        }
+        ++checked;
+    }
 }
 
 int main(const int argc, const char *const *const argv) {
@@ -104,39 +146,7 @@ int main(const int argc, const char *const *const argv) {
         }
     }
 
-    // Spot-check algorithmically-named blocks that appear only as range markers
-    // in UnicodeData.txt and are therefore not covered by the loop above.
-    struct spot {
-        char32_t cp;
-        const char *expected;
-    };
-    static constexpr spot spots[] = {
-        {0xAC00, "HANGUL SYLLABLE GA"},
-        {0xAC01, "HANGUL SYLLABLE GAG"},
-        {0xD7A3, "HANGUL SYLLABLE HIH"},
-        {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00"},
-        {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF"},
-        {0x3400, "CJK UNIFIED IDEOGRAPH-3400"},
-        {0x17000, "TANGUT IDEOGRAPH-17000"},
-        {0x187F7, "TANGUT IDEOGRAPH-187F7"},
-        // Tangut Components (decimal-suffix, 3-digit zero-padded)
-        {0x18800, "TANGUT COMPONENT-001"},
-        {0x18AFF, "TANGUT COMPONENT-768"},
-        // Variation Selectors (decimal-suffix)
-        {0xFE00, "VARIATION SELECTOR-1"},
-        {0xFE0F, "VARIATION SELECTOR-16"},
-        {0xE0100, "VARIATION SELECTOR-17"},
-        {0xE01EF, "VARIATION SELECTOR-256"},
-    };
-    for (const auto &s : spots) {
-        const auto got = uni::code_point_name(s.cp);
-        if (got != s.expected) {
-            std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
-                      << s.expected << "'  got='" << got << "'\n";
-            ++failed;
-        }
-        ++checked;
-    }
+    test_algorithmic(checked, failed);
 
     std::cout << "Checked: " << checked << "  Failed: " << failed << '\n';
     assert(failed == 0);
