@@ -61,8 +61,9 @@ int main(int argc, char** argv) {
 
         // Names starting with '<' are range markers or formal-name-less entries.
         if(name.empty() || has_bracketed_name) {
-            if((name.empty() || !is_range_marker) && !got.empty()) {
-                std::cout << "NO-NAME-FAIL U+" << std::string(line.data(), semi1)
+            const bool should_have_empty_name = name.empty() || !is_range_marker;
+            if(should_have_empty_name && !got.empty()) {
+                std::cout << "UNEXPECTED-NAME U+" << std::string(line.data(), semi1)
                           << "  expected empty  got='" << got << "'\n";
                 ++failed;
             }
