@@ -277,7 +277,7 @@ int main(int argc, const char *const *const argv) {
 
         const auto subs = [&incomplete] {
             auto tmp_view = substrings(incomplete);
-            std::vector<sub_entry> tmp(tmp_view.begin(), tmp_view.end());
+            std::vector<std::string_view> tmp(tmp_view.begin(), tmp_view.end());
             std::sort(tmp.begin(), tmp.end(),
                       [](const auto &a, const auto &b) { return a.size() > b.size(); });
             return tmp;
@@ -383,7 +383,8 @@ int main(int argc, const char *const *const argv) {
                 blocks_by_size.push_back(b);
             else {
                 for (const auto &c : b.data | ranges::views::chunk(0xFE)) {
-                    const std::vector k(c.begin(), c.end());
+                    auto common_chunk = c | ranges::views::common;
+                    std::vector<std::string_view> k(common_chunk.begin(), common_chunk.end());
                     blocks_by_size.push_back(block{
                         b.elem_size, std::unordered_set<std::string_view>(k.begin(), k.end())});
                 }
