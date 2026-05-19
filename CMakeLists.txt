@@ -15,9 +15,9 @@ endif()
 
 # Download UnicodeData.txt into the build directory if absent.
 if(NOT EXISTS ${UCD_FILE})
-    message(STATUS "Downloading UnicodeData.txt for Unicode 14.0 ...")
+    message(STATUS "Downloading UnicodeData.txt ...")
     file(DOWNLOAD
-        "https://unicode.org/Public/14.0.0/ucd/UnicodeData.txt"
+        "https://unicode.org/Public/17.0.0/ucd/UnicodeData.txt"
         "${UCD_FILE}"
         SHOW_PROGRESS
         STATUS _dl_status

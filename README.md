@@ -1,7 +1,7 @@
 [![clang-format](https://github.com/eisenwave/code-point-names/actions/workflows/clang-format.yml/badge.svg)](https://github.com/eisenwave/code-point-names/actions/workflows/clang-format.yml)
 [![Tests](https://github.com/eisenwave/code-point-names/actions/workflows/cmake.yml/badge.svg)](https://github.com/eisenwave/code-point-names/actions/workflows/cmake.yml)
 
-# `get_code_point_name` — Unicode 14 code-point name lookup
+# `get_code_point_name` — Unicode 17 code-point name lookup
 
 Single-header C++ library (`include/get_code_point_name.hpp`)
 that maps a Unicode code point to its official name as defined in the Unicode standard.
@@ -43,5 +43,5 @@ cmake --build .
 ctest
 ```
 
-The header is regenerated from `UnicodeData.txt` (Unicode 14.0)
+The header is regenerated from `UnicodeData.txt` (Unicode 17.0)
 by the `namesgen` tool and written to `build/include/get_code_point_name.hpp`.
