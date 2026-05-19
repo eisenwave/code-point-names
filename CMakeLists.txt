@@ -14,7 +14,8 @@ else()
 endif()
 
 # Download UnicodeData.txt into the build directory if absent.
-if(NOT EXISTS ${UCD_FILE})
+# Only needed for top-level builds (code generation + tests).
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT EXISTS ${UCD_FILE})
     message(STATUS "Downloading UnicodeData.txt ...")
     file(DOWNLOAD
         "https://unicode.org/Public/17.0.0/ucd/UnicodeData.txt"
@@ -28,59 +29,61 @@ if(NOT EXISTS ${UCD_FILE})
     endif()
 endif()
 
-# Code-generator: reads UnicodeData.txt, writes the compressed name tables.
-add_executable(namesgen namesgen.cpp)
-target_compile_features(namesgen PRIVATE cxx_std_23)
-set_target_properties(namesgen PROPERTIES CXX_EXTENSIONS OFF)
-
-# Generate include/get_code_point_name.hpp in the build directory.
-# The file is: <compressed tables from namesgen> + <runtime lookup from names.hpp>
-if(CLANG_FORMAT)
-    set(_fmt_command COMMAND ${CLANG_FORMAT}
-            --style=file:${PROJECT_SOURCE_DIR}/.clang-format
-            -i ${HEADERS_DIR}/get_code_point_name.hpp)
-endif()
-# In top-level builds, copy the result back into include/ so developers
-# don't have to do it manually after changing names.hpp or namesgen.cpp.
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(_copy_command
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${HEADERS_DIR}/get_code_point_name.hpp
-                ${PROJECT_SOURCE_DIR}/include/get_code_point_name.hpp
-    )
-endif()
-add_custom_command(
-    COMMENT "Generating include/get_code_point_name.hpp"
-    OUTPUT  ${HEADERS_DIR}/get_code_point_name.hpp
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
-    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/get_code_point_name.gen
-    COMMAND ${CMAKE_COMMAND}
-            -DTEMPLATE=${PROJECT_SOURCE_DIR}/names.hpp
-            -DINSERT=${HEADERS_DIR}/get_code_point_name.gen
-            -DOUTPUT=${HEADERS_DIR}/get_code_point_name.hpp
-            -P ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
-    ${_fmt_command}
-    ${_copy_command}
-    DEPENDS
-        ${UCD_FILE}
-        namesgen
-        ${PROJECT_SOURCE_DIR}/names.hpp
-        ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
-)
-
-add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/get_code_point_name.hpp)
-
-# Header-only library
+# Header-only library — always defined so consumers can link against it regardless of
+# whether this project is the top-level build or pulled in via FetchContent/add_subdirectory.
 add_library(get_code_point_name INTERFACE)
 add_library(get_code_point_name::get_code_point_name ALIAS get_code_point_name)
-add_dependencies(get_code_point_name gen_header)
-target_include_directories(get_code_point_name INTERFACE
-    $<BUILD_INTERFACE:${HEADERS_DIR}>
-    $<INSTALL_INTERFACE:include>
-)
 target_compile_features(get_code_point_name INTERFACE cxx_std_17)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    # -------------------------------------------------------------------------
+    # Top-level build only: run the code generator and regenerate the header.
+    # Consumers added via FetchContent/add_subdirectory use the pre-committed
+    # header in include/ and never trigger any of this machinery.
+    # -------------------------------------------------------------------------
+
+    # Code-generator: reads UnicodeData.txt, writes the compressed name tables.
+    add_executable(namesgen namesgen.cpp)
+    target_compile_features(namesgen PRIVATE cxx_std_23)
+    set_target_properties(namesgen PROPERTIES CXX_EXTENSIONS OFF)
+
+    # Generate include/get_code_point_name.hpp in the build directory.
+    # The file is: <compressed tables from namesgen> + <runtime lookup from names.hpp>
+    if(CLANG_FORMAT)
+        set(_fmt_command COMMAND ${CLANG_FORMAT}
+                --style=file:${PROJECT_SOURCE_DIR}/.clang-format
+                -i ${HEADERS_DIR}/get_code_point_name.hpp)
+    endif()
+    add_custom_command(
+        COMMENT "Generating include/get_code_point_name.hpp"
+        OUTPUT  ${HEADERS_DIR}/get_code_point_name.hpp
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
+        COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/get_code_point_name.gen
+        COMMAND ${CMAKE_COMMAND}
+                -DTEMPLATE=${PROJECT_SOURCE_DIR}/names.hpp
+                -DINSERT=${HEADERS_DIR}/get_code_point_name.gen
+                -DOUTPUT=${HEADERS_DIR}/get_code_point_name.hpp
+                -P ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
+        ${_fmt_command}
+        # Copy result back into source include/ so the committed header stays current.
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${HEADERS_DIR}/get_code_point_name.hpp
+                ${PROJECT_SOURCE_DIR}/include/get_code_point_name.hpp
+        DEPENDS
+            ${UCD_FILE}
+            namesgen
+            ${PROJECT_SOURCE_DIR}/names.hpp
+            ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
+    )
+
+    add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/get_code_point_name.hpp)
+
+    add_dependencies(get_code_point_name gen_header)
+    target_include_directories(get_code_point_name INTERFACE
+        $<BUILD_INTERFACE:${HEADERS_DIR}>
+        $<INSTALL_INTERFACE:include>
+    )
+
     add_executable(test_names test.cpp)
     add_dependencies(test_names gen_header)
     target_include_directories(test_names PRIVATE ${HEADERS_DIR})
@@ -89,4 +92,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         target_compile_options(test_names PRIVATE -Wall -Wextra)
     endif()
     add_test(NAME test_names COMMAND test_names ${UCD_FILE})
+else()
+    # Subdirectory / FetchContent consumer: use the pre-committed header directly.
+    # No code generation, no namesgen build.
+    target_include_directories(get_code_point_name INTERFACE
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
 endif()
