@@ -161,7 +161,7 @@ void print_dict(std::FILE *const f, const std::vector<block> &blocks) {
 
     int idx = 1;
     std::unordered_map<int, data> table;
-    std::fprintf(f, "inline constexpr char __name_dict[] = \"");
+    std::fprintf(f, "inline constexpr char name_dict[] = \"");
     for (const auto &b : blocks) {
         for (const auto &str : b.data) {
             for (const auto c : str) {
@@ -173,12 +173,11 @@ void print_dict(std::FILE *const f, const std::vector<block> &blocks) {
     }
     std::fprintf(f, "\";");
     std::fprintf(
-        f,
-        "inline constexpr std::string_view __get_name_segment(std::size_t b, std::size_t idx) {");
+        f, "inline constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx) {");
     std::fprintf(f, "switch(b) {");
     for (const auto &[k, v] : table) {
         fprint(f, "case {}:", k);
-        fprint(f, "return std::string_view{{__name_dict + {0} + idx * {1}, {1} }};", v.start,
+        fprint(f, "return std::string_view{{name_dict + {0} + idx * {1}, {1} }};", v.start,
                v.elem_size);
     }
     std::fprintf(f, "} return {};}");
@@ -223,7 +222,7 @@ void print_indexes(
             start = data.size();
         }
 
-        std::fprintf(f, "inline constexpr unsigned long long __name_indexes[] = {");
+        std::fprintf(f, "inline constexpr unsigned long long name_indexes[] = {");
         for (const auto &elem : data) {
             fprint(f, "{:#018x},", elem);
         }
@@ -232,7 +231,7 @@ void print_indexes(
     }();
 
     for (const auto &[index, seg] : std::ranges::views::enumerate(sorted_jump_table)) {
-        fprint(f, "inline constexpr unsigned long long __name_indexes_{}[] = {{", index);
+        fprint(f, "inline constexpr unsigned long long name_indexes_{}[] = {{", index);
         bool first = true;
         char32_t prev = 0;
         std::size_t next_start = seg.start;
@@ -248,13 +247,13 @@ void print_indexes(
         fprint(f, "{:#018x}}};", (std::uint64_t(prev + 1) << 32) | std::uint32_t(0xFFFFFFFF));
     }
 
-    fprint(f, "inline constexpr __name_table_range __get_table_index(std::size_t index) {{");
+    fprint(f, "inline constexpr name_table_range get_table_index(std::size_t index) {{");
     std::fprintf(f, "switch(index) {");
     for (const auto &[index, seg] : std::ranges::views::enumerate(sorted_jump_table)) {
         fprint(f, "case {}:", index);
         fprint(f,
-               "return {{__name_indexes_{0}, __name_indexes_{0} + "
-               "sizeof(__name_indexes_{0})/sizeof(unsigned long long)}};",
+               "return {{name_indexes_{0}, name_indexes_{0} + "
+               "sizeof(name_indexes_{0})/sizeof(unsigned long long)}};",
                index);
     }
     std::fprintf(f, "} return {nullptr, nullptr}; }\n");

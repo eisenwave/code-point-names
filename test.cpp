@@ -45,7 +45,9 @@ line_result test_line(const std::string_view line) {
         return line_result::skipped;
     }
 
-    const std::string got = uni::code_point_name(char32_t(code));
+    char got_buf[uni::cp_name_max_length];
+    const std::size_t got_len = uni::code_point_name(char32_t(code), got_buf);
+    const std::string_view got(got_buf, got_len);
 
     // Range markers (<... , First>/<... , Last>) represent algorithmically-
     // named blocks and are validated in dedicated spot checks below.
@@ -129,7 +131,10 @@ int main(const int argc, const char *const *const argv) {
         {0xE01EF, "VARIATION SELECTOR-256"},
     };
     for (const auto &s : spots) {
-        const auto got = uni::code_point_name(s.cp);
+        char got_buf[uni::cp_name_max_length];
+        std::size_t got_len = 0;
+        uni::code_point_name(s.cp, got_buf, got_len);
+        const std::string_view got(got_buf, got_len);
         if (got != s.expected) {
             std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
                       << s.expected << "'  got='" << got << "'\n";

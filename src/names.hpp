@@ -149,7 +149,7 @@ constexpr const char *hangul_t[] = {"",   "G",  "GG", "GS", "N",  "NJ", "NH", "D
                                     "LM", "LB", "LS", "LT", "LP", "LH", "M",  "B", "BS", "S",
                                     "SS", "NG", "J",  "C",  "K",  "T",  "P",  "H"};
 
-struct generated_range {
+struct algorithmic_range {
     const char *prefix;
     uint32_t lo, hi;
 };
@@ -160,7 +160,7 @@ struct decimal_range {
 };
 
 // All algorithmically-named blocks in Unicode 14 (prefix + uppercase hex, min 4 digits).
-constexpr generated_range algorithmic_ranges[] = {
+constexpr algorithmic_range algorithmic_ranges[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400u, 0x4DBFu},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00u, 0x9FFFu},
     {"CJK UNIFIED IDEOGRAPH-", 0x20000u, 0x2A6DFu},
