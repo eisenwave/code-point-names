@@ -55,14 +55,15 @@ int main(int argc, char** argv) {
 
         // Range markers (<... , First>/<... , Last>) represent algorithmically-
         // named blocks and are validated in dedicated spot checks below.
-        const bool has_bracketed_name = name.starts_with('<');
+        const bool has_angle_bracket_prefix = name.starts_with('<');
         const bool is_range_marker =
-            has_bracketed_name && (name.ends_with(", First>") || name.ends_with(", Last>"));
+            has_angle_bracket_prefix && (name.ends_with(", First>") || name.ends_with(", Last>"));
+        const bool is_nameless_entry =
+            name.empty() || (has_angle_bracket_prefix && !is_range_marker);
 
         // Names starting with '<' are range markers or formal-name-less entries.
-        if(name.empty() || has_bracketed_name) {
-            const bool should_have_empty_name = name.empty() || !is_range_marker;
-            if(should_have_empty_name && !got.empty()) {
+        if(name.empty() || has_angle_bracket_prefix) {
+            if(is_nameless_entry && !got.empty()) {
                 std::cout << "UNEXPECTED-NAME U+" << std::string(line.data(), semi1)
                           << "  expected empty  got='" << got << "'\n";
                 ++failed;
