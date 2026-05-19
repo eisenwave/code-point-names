@@ -1,4 +1,4 @@
-# cedilla — Unicode 14 code-point name lookup
+# Code point names — Unicode 14 code-point name lookup
 
 Single-header C++ library (`include/cedilla/cp_to_name.hpp`) that maps a Unicode
 code point to its official name as defined in Unicode 14.0.
