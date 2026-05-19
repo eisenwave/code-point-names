@@ -6,6 +6,9 @@
 Single-header C++ library (`include/get_code_point_name.hpp`)
 that maps a Unicode code point to its official name as defined in the Unicode standard.
 
+This library is a heavily modified version of
+[`cor3ntin/ext-unicode-db`](https://github.com/cor3ntin/ext-unicode-db).
+
 ## API
 
 The library provides a single function:
