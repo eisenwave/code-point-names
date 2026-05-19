@@ -1,11 +1,11 @@
-#ifndef CODE_POINT_TO_NAME_HPP
-#define CODE_POINT_TO_NAME_HPP
+#ifndef GET_CODE_POINT_NAME_HPP
+#define GET_CODE_POINT_NAME_HPP
 
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
 
-namespace uni {
+namespace get_code_point_name {
 namespace details {
 
 struct name_table_range {
@@ -42,7 +42,7 @@ constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // 
 }
 
 struct name_view {
-    constexpr name_view(char32_t c) : c(c) {};
+    constexpr name_view(char32_t c) : c(c) {}
 
     struct sentinel {};
     struct iterator {
@@ -223,13 +223,13 @@ constexpr decimal_range decimal_ranges[] = {
 
 // Maximum number of characters in any Unicode 14 code point name
 // (including algorithmically derived names). Size output buffers accordingly.
-inline constexpr std::size_t cp_name_max_length = 96;
+inline constexpr std::size_t max_length = 96;
 
 // If `cp` has a code point name,
 // appends that name to `out`,
 // and return the name length.
 // Otherwise, `out` is unmodified, and `0` is returned.
-[[nodiscard]] inline std::size_t code_point_name(const char32_t cp, char *const out) {
+[[nodiscard]] inline std::size_t get_code_point_name(const char32_t cp, char *const out) noexcept {
     std::size_t length = 0;
     // Hangul syllables: algorithmic decomposition (Unicode § 3.12)
     if (cp >= char32_t(0xAC00) && cp <= char32_t(0xD7A3)) {
@@ -268,7 +268,7 @@ inline constexpr std::size_t cp_name_max_length = 96;
                 out[length++] = *p;
             }
             length += details::format_decimal_zero_padded(std::uint32_t(cp) - r.base + 1, r.width,
-                                                           out + length);
+                                                          out + length);
             return length;
         }
     }
@@ -278,6 +278,6 @@ inline constexpr std::size_t cp_name_max_length = 96;
     return length;
 }
 
-} // namespace uni
+} // namespace get_code_point_name
 
-#endif // CODE_POINT_TO_NAME_HPP
+#endif // GET_CODE_POINT_NAME_HPP

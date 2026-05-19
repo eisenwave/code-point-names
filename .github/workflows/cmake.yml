@@ -42,3 +42,7 @@ jobs:
     - name: Test
       working-directory: ${{runner.workspace}}/build
       run: ctest -C ${{ matrix.cmake-build-type }} --output-on-failure
+
+    - name: Verify committed header is up to date
+      working-directory: ${{github.workspace}}
+      run: git diff --exit-code -- include/get_code_point_name.hpp

@@ -1,12 +1,13 @@
-// Standalone correctness test for uni::cp_name().
+// Standalone correctness test for get_code_point_name::get_code_point_name().
 // Usage: test_names <path/to/UnicodeData.txt>
 //
 // For every line in UnicodeData.txt whose name field is a real name (i.e. does
-// not start with '<'), we check that uni::cp_name(cp) returns that exact name.
+// not start with '<'), we check that get_code_point_name::get_code_point_name(cp)
+// returns that exact name.
 // Additional spot-checks cover algorithmically-named blocks that only appear
 // as range markers in UnicodeData.txt (Hangul, CJK Unified, Tangut, etc.).
 
-#include <cedilla/cp_to_name.hpp>
+#include <get_code_point_name.hpp>
 
 #include <cassert>
 #include <charconv>
@@ -45,8 +46,8 @@ line_result test_line(const std::string_view line) {
         return line_result::skipped;
     }
 
-    char got_buf[uni::cp_name_max_length];
-    const std::size_t got_len = uni::code_point_name(char32_t(code), got_buf);
+    char got_buf[get_code_point_name::max_length];
+    const std::size_t got_len = get_code_point_name::get_code_point_name(char32_t(code), got_buf);
     const std::string_view got(got_buf, got_len);
 
     // Range markers (<... , First>/<... , Last>) represent algorithmically-
@@ -101,8 +102,8 @@ void test_algorithmic(int &checked, int &failed) {
     };
 
     for (const auto &s : spots) {
-        char got_buf[uni::cp_name_max_length];
-        const std::size_t got_len = uni::code_point_name(s.cp, got_buf);
+        char got_buf[get_code_point_name::max_length];
+        const std::size_t got_len = get_code_point_name::get_code_point_name(s.cp, got_buf);
         const std::string_view got(got_buf, got_len);
         if (got != s.expected) {
             std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
