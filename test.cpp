@@ -55,11 +55,13 @@ int main(int argc, char** argv) {
 
         // Range markers (<... , First>/<... , Last>) represent algorithmically-
         // named blocks and are validated in dedicated spot checks below.
-        const bool is_range_marker = name.ends_with(", First>") || name.ends_with(", Last>");
+        const bool has_bracketed_name = name.starts_with('<');
+        const bool is_range_marker =
+            has_bracketed_name && (name.ends_with(", First>") || name.ends_with(", Last>"));
 
         // Names starting with '<' are range markers or formal-name-less entries.
-        if(name.empty() || name.starts_with('<')) {
-            if(!is_range_marker && !got.empty()) {
+        if(name.empty() || has_bracketed_name) {
+            if((name.empty() || !is_range_marker) && !got.empty()) {
                 std::cout << "NO-NAME-FAIL U+" << std::string(line.data(), semi1)
                           << "  expected empty  got='" << got << "'\n";
                 ++failed;
