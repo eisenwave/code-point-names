@@ -42,7 +42,7 @@ constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // 
 }
 
 struct name_view {
-    constexpr name_view(char32_t c) : c(c) {};
+    constexpr name_view(char32_t c) : c(c) {}
 
     struct sentinel {};
     struct iterator {

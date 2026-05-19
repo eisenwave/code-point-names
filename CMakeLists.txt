@@ -38,6 +38,15 @@ set_target_properties(namesgen PROPERTIES CXX_EXTENSIONS OFF)
 if(CLANG_FORMAT)
     set(_fmt_command COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/get_code_point_name.hpp)
 endif()
+# In top-level builds, copy the result back into include/ so developers
+# don't have to do it manually after changing names.hpp or namesgen.cpp.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(_copy_command
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${HEADERS_DIR}/get_code_point_name.hpp
+                ${PROJECT_SOURCE_DIR}/include/get_code_point_name.hpp
+    )
+endif()
 add_custom_command(
     COMMENT "Generating include/get_code_point_name.hpp"
     OUTPUT  ${HEADERS_DIR}/get_code_point_name.hpp
@@ -49,6 +58,7 @@ add_custom_command(
             -DOUTPUT=${HEADERS_DIR}/get_code_point_name.hpp
             -P ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
     ${_fmt_command}
+    ${_copy_command}
     DEPENDS
         ${UCD_FILE}
         namesgen
