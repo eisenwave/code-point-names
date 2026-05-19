@@ -46,16 +46,31 @@ int main(int argc, char** argv) {
 
         std::string_view name(line.data() + semi1 + 1, semi2 - semi1 - 1);
 
-        // Names starting with '<' are range markers or formal-name-less entries.
-        if(name.empty() || name[0] == '<')
-            continue;
-
         uint32_t code = 0;
         auto [p, ec] = std::from_chars(line.data(), line.data() + semi1, code, 16);
         if(ec != std::errc{})
             continue;
 
         const auto got = uni::cp_name(char32_t(code));
+
+        // Range markers (<... , First>/<... , Last>) represent algorithmically-
+        // named blocks and are validated in dedicated spot checks below.
+        const bool has_angle_bracket_prefix = name.starts_with('<');
+        const bool is_range_marker =
+            has_angle_bracket_prefix && (name.ends_with(", First>") || name.ends_with(", Last>"));
+        const bool is_nameless_entry =
+            name.empty() || (has_angle_bracket_prefix && !is_range_marker);
+
+        // Names starting with '<' are range markers or formal-name-less entries.
+        if(name.empty() || has_angle_bracket_prefix) {
+            if(is_nameless_entry && !got.empty()) {
+                std::cout << "UNEXPECTED-NAME U+" << std::string(line.data(), semi1)
+                          << "  expected empty  got='" << got << "'\n";
+                ++failed;
+            }
+            ++checked;
+            continue;
+        }
         if(got != name) {
             std::cout << "FAIL U+" << std::string(line.data(), semi1) << "  expected='" << name
                       << "'  got='" << got << "'\n";
