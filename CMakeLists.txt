@@ -1,13 +1,17 @@
 cmake_minimum_required(VERSION 3.18)
-project(cedilla VERSION 1.0)
-enable_testing()
+project(get_code_point_name VERSION 1.0)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Per-project binary dir so FetchContent consumers don't have their tree polluted.
+set(HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(UCD_FILE    ${CMAKE_CURRENT_BINARY_DIR}/UnicodeData.txt)
 
-set(HEADERS_DIR ${CMAKE_BINARY_DIR}/include/cedilla)
-set(UCD_FILE    ${CMAKE_BINARY_DIR}/UnicodeData.txt)
+# Only enable testing and require clang-format when this is the top-level build.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    find_program(CLANG_FORMAT NAMES clang-format-20 clang-format REQUIRED)
+else()
+    find_program(CLANG_FORMAT NAMES clang-format-20 clang-format)
+endif()
 
 # Download UnicodeData.txt into the build directory if absent.
 if(NOT EXISTS ${UCD_FILE})
@@ -24,24 +28,27 @@ if(NOT EXISTS ${UCD_FILE})
     endif()
 endif()
 
-find_program(CLANG_FORMAT NAMES clang-format-20 clang-format REQUIRED)
-
 # Code-generator: reads UnicodeData.txt, writes the compressed name tables.
 add_executable(namesgen namesgen.cpp)
+target_compile_features(namesgen PRIVATE cxx_std_23)
+set_target_properties(namesgen PROPERTIES CXX_EXTENSIONS OFF)
 
-# Generate include/cedilla/cp_to_name.hpp in the build directory.
+# Generate include/get_code_point_name.hpp in the build directory.
 # The file is: <compressed tables from namesgen> + <runtime lookup from names.hpp>
+if(CLANG_FORMAT)
+    set(_fmt_command COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/get_code_point_name.hpp)
+endif()
 add_custom_command(
-    COMMENT "Generating include/cedilla/cp_to_name.hpp"
-    OUTPUT  ${HEADERS_DIR}/cp_to_name.hpp
+    COMMENT "Generating include/get_code_point_name.hpp"
+    OUTPUT  ${HEADERS_DIR}/get_code_point_name.hpp
     COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
-    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/cp_to_name.gen
+    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/get_code_point_name.gen
     COMMAND ${CMAKE_COMMAND}
             -DTEMPLATE=${PROJECT_SOURCE_DIR}/names.hpp
-            -DINSERT=${HEADERS_DIR}/cp_to_name.gen
-            -DOUTPUT=${HEADERS_DIR}/cp_to_name.hpp
+            -DINSERT=${HEADERS_DIR}/get_code_point_name.gen
+            -DOUTPUT=${HEADERS_DIR}/get_code_point_name.hpp
             -P ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
-    COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/cp_to_name.hpp
+    ${_fmt_command}
     DEPENDS
         ${UCD_FILE}
         namesgen
@@ -49,18 +56,25 @@ add_custom_command(
         ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
 )
 
-add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/cp_to_name.hpp)
+add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/get_code_point_name.hpp)
 
-# Header-only library wrapping cp_to_name.hpp
-add_library(cedilla INTERFACE)
-add_dependencies(cedilla gen_header)
-target_include_directories(cedilla INTERFACE ${CMAKE_BINARY_DIR}/include)
+# Header-only library
+add_library(get_code_point_name INTERFACE)
+add_library(get_code_point_name::get_code_point_name ALIAS get_code_point_name)
+add_dependencies(get_code_point_name gen_header)
+target_include_directories(get_code_point_name INTERFACE
+    $<BUILD_INTERFACE:${HEADERS_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
+target_compile_features(get_code_point_name INTERFACE cxx_std_17)
 
-add_executable(test_names test.cpp)
-add_dependencies(test_names gen_header)
-target_include_directories(test_names PRIVATE ${CMAKE_BINARY_DIR}/include)
-target_compile_features(test_names PRIVATE cxx_std_17)
-if(NOT MSVC)
-    target_compile_options(test_names PRIVATE -Wall -Wextra)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    add_executable(test_names test.cpp)
+    add_dependencies(test_names gen_header)
+    target_include_directories(test_names PRIVATE ${HEADERS_DIR})
+    target_compile_features(test_names PRIVATE cxx_std_20)
+    if(NOT MSVC)
+        target_compile_options(test_names PRIVATE -Wall -Wextra)
+    endif()
+    add_test(NAME test_names COMMAND test_names ${UCD_FILE})
 endif()
-add_test(NAME test_names COMMAND test_names ${UCD_FILE})

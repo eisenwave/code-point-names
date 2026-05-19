@@ -42,3 +42,8 @@ jobs:
     - name: Test
       working-directory: ${{runner.workspace}}/build
       run: ctest -C ${{ matrix.cmake-build-type }} --output-on-failure
+
+    - name: Verify committed header matches build output
+      run: |
+        diff ${{ runner.workspace }}/build/include/get_code_point_name.hpp \
+             $GITHUB_WORKSPACE/include/get_code_point_name.hpp

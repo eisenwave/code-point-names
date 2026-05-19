@@ -1,26 +1,40 @@
-# Code point names — Unicode 14 code-point name lookup
+[![clang-format](https://github.com/eisenwave/code-point-names/actions/workflows/clang-format.yml/badge.svg)](https://github.com/eisenwave/code-point-names/actions/workflows/clang-format.yml)
+[![Tests](https://github.com/eisenwave/code-point-names/actions/workflows/cmake.yml/badge.svg)](https://github.com/eisenwave/code-point-names/actions/workflows/cmake.yml)
 
-Single-header C++ library (`include/cedilla/cp_to_name.hpp`) that maps a Unicode
-code point to its official name as defined in Unicode 14.0.
+# `get_code_point_name` — Unicode 14 code-point name lookup
+
+Single-header C++ library (`include/get_code_point_name.hpp`)
+that maps a Unicode code point to its official name as defined in the Unicode standard.
 
 ## API
 
-```cpp
-#include <cedilla/cp_to_name.hpp>
+The library provides a single function:
 
-// Returns a lazy range/view; call .to_string() to materialise.
-std::string name = uni::cp_name(U'A').to_string();  // "LATIN CAPITAL LETTER A"
-std::string name = uni::cp_name(0x1F600).to_string(); // "GRINNING FACE"
+```cpp
+namespace get_code_point_name {
+  std::size_t get_code_point_name(char32_t code_point, char* out) noexcept;
+}
 ```
 
-Characters whose names are algorithmically derived (Hangul syllables, CJK
-Unified Ideographs, Tangut, etc.) are not stored in the table; `cp_name()`
-returns an empty string for those.
+*Effects*:
+If `code_point` has a code point name,
+appends that name to `out` and returns the length of the name.
+Otherwise, `out` is unmodified, and returns zero.
+
+### Usage example
+
+```cpp
+#include <get_code_point_name.hpp>
+
+char buf[get_code_point_name::max_length];
+std::size_t len = get_code_point_name::get_code_point_name(U'A', buf);
+// buf[0..len-1] == "LATIN CAPITAL LETTER A"
+```
 
 ## Build
 
-Requires: CMake ≥ 3.18, a C++23-capable compiler (for the generator), and an
-internet connection on first configure (to download `UnicodeData.txt`).
+Requires: CMake ≥ 3.18, a C++23-capable compiler (for the generator),
+and an internet connection on first configure (to download `UnicodeData.txt`).
 
 ```sh
 mkdir build && cd build
@@ -29,5 +43,5 @@ cmake --build .
 ctest
 ```
 
-The header is regenerated from `ucd/14.0/UnicodeData.txt` by the `namesgen`
-tool and written to `include/cedilla/cp_to_name.hpp`.
+The header is regenerated from `UnicodeData.txt` (Unicode 14.0)
+by the `namesgen` tool and written to `build/include/get_code_point_name.hpp`.
