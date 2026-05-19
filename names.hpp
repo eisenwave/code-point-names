@@ -216,7 +216,7 @@ constexpr decimal_range decimal_ranges[] = {
     for (int i = n - 1; i >= 0; --i) {
         out[length++] = tmp[i];
     }
-    return 0;
+    return length;
 }
 
 } // namespace details
@@ -256,7 +256,7 @@ inline constexpr std::size_t cp_name_max_length = 96;
             for (const char *p = r.prefix; *p; ++p) {
                 out[length++] = *p;
             }
-            length += details::format_hex(std::uint32_t(cp), out);
+            length += details::format_hex(std::uint32_t(cp), out + length);
             return length;
         }
     }
@@ -267,8 +267,8 @@ inline constexpr std::size_t cp_name_max_length = 96;
             for (const char *p = r.prefix; *p; ++p) {
                 out[length++] = *p;
             }
-            length +=
-                details::format_decimal_zero_padded(std::uint32_t(cp) - r.base + 1, r.width, out);
+            length += details::format_decimal_zero_padded(std::uint32_t(cp) - r.base + 1, r.width,
+                                                           out + length);
             return length;
         }
     }
