@@ -144,42 +144,58 @@ constexpr const char *hangul_t[] = {"",   "G",  "GG", "GS", "N",  "NJ", "NH", "D
                                     "LM", "LB", "LS", "LT", "LP", "LH", "M",  "B", "BS", "S",
                                     "SS", "NG", "J",  "C",  "K",  "T",  "P",  "H"};
 
-struct algorithmic_range {
+struct hex_range {
     const char *prefix;
-    std::uint32_t lo, hi;
+    // Minimum code point (inclusive).
+    std::uint32_t lo;
+    // Maximum code point (inclusive).
+    std::uint32_t hi;
 };
+
 struct decimal_range {
     const char *prefix;
-    std::uint32_t lo, hi, base;
+    // Minimum code point (inclusive).
+    std::uint32_t lo;
+    // Maximum code point (inclusive).
+    std::uint32_t hi;
+    // The decimal value of the first code point in the range.
+    std::uint32_t base;
+    // Minimum amount of digits (for zero padding).
     int width;
 };
 
-// All algorithmically named blocks in Unicode 14 (prefix + uppercase hex, min 4 digits).
-constexpr algorithmic_range algorithmic_ranges[] = {
-    {"CJK UNIFIED IDEOGRAPH-", 0x3400u, 0x4DBFu},
-    {"CJK UNIFIED IDEOGRAPH-", 0x4E00u, 0x9FFFu},
-    {"CJK UNIFIED IDEOGRAPH-", 0x20000u, 0x2A6DFu},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2A700u, 0x2B738u},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2B740u, 0x2B81Du},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2B820u, 0x2CEA1u},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2CEB0u, 0x2EBE0u},
-    {"CJK UNIFIED IDEOGRAPH-", 0x30000u, 0x3134Au},
-    {"TANGUT IDEOGRAPH-", 0x17000u, 0x187F7u},
-    {"NUSHU CHARACTER-", 0x1B170u, 0x1B2FBu},
-    {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00u, 0x18CD5u},
-    {"CJK COMPATIBILITY IDEOGRAPH-", 0xF900u, 0xFA6Du},
-    {"CJK COMPATIBILITY IDEOGRAPH-", 0xFA70u, 0xFAD9u},
-    {"CJK COMPATIBILITY IDEOGRAPH-", 0x2F800u, 0x2FA1Du},
+// All algorithmically named blocks in Unicode 17 (prefix + uppercase hex, min 4 digits).
+// clang-format off
+inline constexpr hex_range hex_ranges[] = {
+    {"CJK UNIFIED IDEOGRAPH-",          0x3400,   0x4DBF},  // Extension A
+    {"CJK UNIFIED IDEOGRAPH-",          0x4E00,   0x9FFF},  // CJK Unified Ideographs
+    {"CJK UNIFIED IDEOGRAPH-",         0x20000,  0x2A6DF},  // Extension B
+    {"CJK UNIFIED IDEOGRAPH-",         0x2A700,  0x2B73F},  // Extension C
+    {"CJK UNIFIED IDEOGRAPH-",         0x2B740,  0x2B81D},  // Extension D
+    {"CJK UNIFIED IDEOGRAPH-",         0x2B820,  0x2CEAD},  // Extension E
+    {"CJK UNIFIED IDEOGRAPH-",         0x2CEB0,  0x2EBE0},  // Extension F
+    {"CJK UNIFIED IDEOGRAPH-",         0x2EBF0,  0x2EE5D},  // Extension I (Unicode 15.1)
+    {"CJK UNIFIED IDEOGRAPH-",         0x30000,  0x3134A},  // Extension G
+    {"CJK UNIFIED IDEOGRAPH-",         0x31350,  0x323AF},  // Extension H (Unicode 15)
+    {"CJK UNIFIED IDEOGRAPH-",         0x323B0,  0x33479},  // Extension J (Unicode 17)
+    {"TANGUT IDEOGRAPH-",              0x17000,  0x187FF},  // Tangut Ideograph
+    {"TANGUT IDEOGRAPH-",              0x18D00,  0x18D1E},  // Supplement (Unicode 13)
+    {"NUSHU CHARACTER-",               0x1B170,  0x1B2FB},  // Nushu Character
+    {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00,  0x18CD5},  // Khitan Small Script Character
+    {"EGYPTIAN HIEROGLYPH-",           0x13460,  0x143FA},  // Extended-A (Unicode 16)
+    {"CJK COMPATIBILITY IDEOGRAPH-",    0xF900,   0xFA6D},  // CJK Compatibility Ideograph
+    {"CJK COMPATIBILITY IDEOGRAPH-",    0xFA70,   0xFAD9},  // (Continued)
+    {"CJK COMPATIBILITY IDEOGRAPH-",   0x2F800,  0x2FA1D},  // Supplement
 };
 
 // Algorithmically named blocks whose suffix is a decimal number.
-// base  = value of the first codepoint in the range
-// width = minimum digit count (zero-padded)
-constexpr decimal_range decimal_ranges[] = {
-    {"TANGUT COMPONENT-", 0x18800u, 0x18AFFu, 0x18800u, 3},        // 001-768
-    {"VARIATION SELECTOR-", 0xFE00u, 0xFE0Fu, 0xFE00u, 1},         // 1-16
-    {"VARIATION SELECTOR-", 0xE0100u, 0xE01EFu, 0xE0100u - 16, 1}, // 17-256
+inline constexpr decimal_range decimal_ranges[] = {
+    {"TANGUT COMPONENT-",   0x18800, 0x18AFF, 0x18800, 3}, // 001-768
+    {"TANGUT COMPONENT-",   0x18D80, 0x18DF2, 0x18A80, 3}, // 769-883 (Unicode 17)
+    {"VARIATION SELECTOR-",  0xFE00,  0xFE0F,  0xFE00, 1}, // 1-16
+    {"VARIATION SELECTOR-", 0xE0100, 0xE01EF, 0xE0100 - 16, 1}, // 17-256
 };
+// clang-format on
 
 [[nodiscard]] inline std::size_t format_decimal_zero_padded(const std::uint32_t n, const int width,
                                                             char *const out) {
@@ -221,7 +237,7 @@ constexpr decimal_range decimal_ranges[] = {
 
 } // namespace details
 
-// Maximum number of characters in any Unicode 14 code point name
+// Maximum number of characters in any Unicode code point name
 // (including algorithmically derived names). Size output buffers accordingly.
 inline constexpr std::size_t max_length = 96;
 
@@ -251,7 +267,7 @@ inline constexpr std::size_t max_length = 96;
     }
 
     // Algorithmically-named blocks: prefix + uppercase hex codepoint
-    for (const details::algorithmic_range &r : details::algorithmic_ranges) {
+    for (const details::hex_range &r : details::hex_ranges) {
         if (std::uint32_t(cp) >= r.lo && std::uint32_t(cp) <= r.hi) {
             for (const char *p = r.prefix; *p; ++p) {
                 out[length++] = *p;

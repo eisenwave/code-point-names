@@ -22,17 +22,51 @@ template <class... Args> static void fprint(std::format_string<Args...> fmt, Arg
 }
 
 // Returns true for code points whose names are algorithmically derived and
-// must not be stored in the compressed dictionary.  These ranges appear as
-// individual entries in UnicodeData.txt but are handled at runtime instead.
+// must not be stored in the compressed dictionary.
 [[nodiscard]] static bool is_algorithmically_named(const std::uint32_t cp) {
-    return (cp >= 0xAC00u && cp <= 0xD7A3u) ||   // Hangul Syllables
-           (cp >= 0xF900u && cp <= 0xFAD9u) ||   // CJK Compatibility Ideographs
-           (cp >= 0x2F800u && cp <= 0x2FA1Du) || // CJK Compat Ideographs Supplement
-           (cp >= 0x1B170u && cp <= 0x1B2FBu) || // Nushu
-           (cp >= 0x18B00u && cp <= 0x18CD5u) || // Khitan Small Script
-           (cp >= 0x18800u && cp <= 0x18AFFu) || // Tangut Components
-           (cp >= 0xFE00u && cp <= 0xFE0Fu) ||   // Variation Selectors 1-16
-           (cp >= 0xE0100u && cp <= 0xE01EFu);   // Variation Selectors 17-256
+    struct range {
+        std::uint32_t lo, hi;
+    };
+    // Mirrors hex_ranges and decimal_ranges from `names.hpp`,
+    // plus Hangul Syllables (handled by a bespoke algorithm at runtime).
+    // IMPORTANT: Keep in sync.
+    static constexpr range ranges[] = {
+        // Hangul Syllables (bespoke algorithm, not in algorithmic_ranges)
+        {0xAC00u, 0xD7A3u},
+
+        // hex_ranges (prefix + uppercase hex suffix)
+        {0x3400u, 0x4DBFu},   // CJK Unified Ideographs Extension A
+        {0x4E00u, 0x9FFFu},   // CJK Unified Ideographs
+        {0x20000u, 0x2A6DFu}, // CJK Unified Ideographs Extension B
+        {0x2A700u, 0x2B73Fu}, // Extension C
+        {0x2B740u, 0x2B81Du}, // Extension D
+        {0x2B820u, 0x2CEADu}, // Extension E
+        {0x2CEB0u, 0x2EBE0u}, // Extension F
+        {0x2EBF0u, 0x2EE5Du}, // Extension I (Unicode 15.1)
+        {0x30000u, 0x3134Au}, // Extension G
+        {0x31350u, 0x323AFu}, // Extension H (Unicode 15)
+        {0x323B0u, 0x33479u}, // Extension J (Unicode 17)
+        {0x17000u, 0x187FFu}, // Tangut Ideograph
+        {0x18D00u, 0x18D1Eu}, // Tangut Ideograph Supplement (Unicode 13)
+        {0x1B170u, 0x1B2FBu}, // Nushu Character
+        {0x18B00u, 0x18CD5u}, // Khitan Small Script Character
+        {0x13460u, 0x143FAu}, // Egyptian Hieroglyph Extended-A (Unicode 16)
+        {0xF900u, 0xFA6Du},   // CJK Compatibility Ideograph
+        {0xFA70u, 0xFAD9u},   // CJK Compatibility Ideograph (continued)
+        {0x2F800u, 0x2FA1Du}, // CJK Compatibility Ideograph Supplement
+
+        // decimal_ranges (prefix + decimal number suffix)
+        {0x18800u, 0x18AFFu}, // Tangut Component 001-768
+        {0x18D80u, 0x18DF2u}, // Tangut Component 769-883 (Unicode 17)
+        {0xFE00u, 0xFE0Fu},   // Variation Selector 1-16
+        {0xE0100u, 0xE01EFu}, // Variation Selector 17-256
+    };
+    for (const auto &[lo, hi] : ranges) {
+        if (cp >= lo && cp <= hi) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Parse UnicodeData.txt (semicolon-separated).

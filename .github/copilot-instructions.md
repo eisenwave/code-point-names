@@ -1,6 +1,6 @@
 # get_code_point_name — project overview
 
-Single-header C++ library that maps a Unicode 14.0 code point to its official name.
+Single-header C++ library that maps a Unicode 17.0 code point to its official name.
 No heap allocation anywhere in the lookup path.
 
 Public API (`include/get_code_point_name.hpp`, also committed at that path):

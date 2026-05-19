@@ -74,6 +74,33 @@ line_result test_line(const std::string_view line) {
     return line_result::success;
 }
 
+void test_data_file(const char *const path, int &checked, int &failed) {
+    std::ifstream f(path);
+    if (!f) {
+        std::cerr << "Error: cannot open " << path << '\n';
+        std::exit(1);
+    }
+
+    std::string line;
+
+    while (std::getline(f, line)) {
+        switch (test_line(line)) {
+        case line_result::skipped: {
+            continue;
+        }
+        case line_result::success: {
+            ++checked;
+            continue;
+        }
+        case line_result::failure: {
+            ++checked;
+            ++failed;
+            continue;
+        }
+        }
+    }
+}
+
 void test_algorithmic(int &checked, int &failed) {
     // Spot-check algorithmically-named blocks that appear only as range markers
     // in UnicodeData.txt and are therefore not covered by the loop above.
@@ -90,15 +117,19 @@ void test_algorithmic(int &checked, int &failed) {
         {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF"},
         {0x3400, "CJK UNIFIED IDEOGRAPH-3400"},
         {0x17000, "TANGUT IDEOGRAPH-17000"},
-        {0x187F7, "TANGUT IDEOGRAPH-187F7"},
-        // Tangut Components (decimal-suffix, 3-digit zero-padded)
-        {0x18800, "TANGUT COMPONENT-001"},
-        {0x18AFF, "TANGUT COMPONENT-768"},
-        // Variation Selectors (decimal-suffix)
-        {0xFE00, "VARIATION SELECTOR-1"},
-        {0xFE0F, "VARIATION SELECTOR-16"},
-        {0xE0100, "VARIATION SELECTOR-17"},
-        {0xE01EF, "VARIATION SELECTOR-256"},
+        {0x187FF, "TANGUT IDEOGRAPH-187FF"},
+        // Tangut Ideograph Supplement
+        {0x18D00, "TANGUT IDEOGRAPH-18D00"},
+        {0x18D1E, "TANGUT IDEOGRAPH-18D1E"},
+        // CJK Extension H (Unicode 15)
+        {0x31350, "CJK UNIFIED IDEOGRAPH-31350"},
+        {0x323AF, "CJK UNIFIED IDEOGRAPH-323AF"},
+        // CJK Extension I (Unicode 15.1)
+        {0x2EBF0, "CJK UNIFIED IDEOGRAPH-2EBF0"},
+        {0x2EE5D, "CJK UNIFIED IDEOGRAPH-2EE5D"},
+        // CJK Extension J (Unicode 17)
+        {0x323B0, "CJK UNIFIED IDEOGRAPH-323B0"},
+        {0x33479, "CJK UNIFIED IDEOGRAPH-33479"},
     };
 
     for (const auto &s : spots) {
@@ -120,36 +151,13 @@ int main(const int argc, const char *const *const argv) {
         return 1;
     }
 
-    std::ifstream f(argv[1]);
-    if (!f) {
-        std::cerr << "Error: cannot open " << argv[1] << '\n';
-        return 1;
-    }
-
     int checked = 0;
     int failed = 0;
-    std::string line;
 
-    while (std::getline(f, line)) {
-        switch (test_line(line)) {
-        case line_result::skipped: {
-            continue;
-        }
-        case line_result::success: {
-            ++checked;
-            continue;
-        }
-        case line_result::failure: {
-            ++checked;
-            ++failed;
-            continue;
-        }
-        }
-    }
-
+    test_data_file(argv[1], checked, failed);
     test_algorithmic(checked, failed);
 
-    std::cout << "Checked: " << checked << "  Failed: " << failed << '\n';
+    std::cout << "Checked: " << checked << "\nFailed: " << failed << '\n';
     assert(failed == 0);
     return failed == 0 ? 0 : 1;
 }
