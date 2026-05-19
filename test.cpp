@@ -14,10 +14,6 @@
 #include <iostream>
 #include <string>
 
-static bool ends_with(std::string_view text, std::string_view suffix) {
-    return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
-}
-
 int main(int argc, char** argv) {
     if(argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <path/to/UnicodeData.txt>\n";
@@ -59,12 +55,10 @@ int main(int argc, char** argv) {
 
         // Range markers (<... , First>/<... , Last>) represent algorithmically-
         // named blocks and are validated in dedicated spot checks below.
-        const bool is_range_marker =
-            name.size() >= 7 &&
-            (ends_with(name, ", First>") || ends_with(name, ", Last>"));
+        const bool is_range_marker = name.ends_with(", First>") || name.ends_with(", Last>");
 
         // Names starting with '<' are range markers or formal-name-less entries.
-        if(name.empty() || name[0] == '<') {
+        if(name.empty() || name.starts_with('<')) {
             if(!is_range_marker && !got.empty()) {
                 std::cout << "NO-NAME-FAIL U+" << std::string(line.data(), semi1)
                           << "  expected empty  got='" << got << "'\n";
