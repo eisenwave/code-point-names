@@ -1,0 +1,17 @@
+name: clang-format
+
+on: [push]
+
+jobs:
+  format:
+    name: Check formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format-20
+
+      - name: Check clang-format
+        run: clang-format-20 --dry-run --Werror namesgen.cpp test.cpp src/names.hpp
