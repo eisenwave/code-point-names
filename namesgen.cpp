@@ -21,47 +21,7 @@ template <class... Args> static void fprint(std::format_string<Args...> fmt, Arg
 }
 #include <cassert>
 
-namespace ranges {
-using namespace std::ranges;
-
-// Polyfill for std::ranges::to (available from C++23/GCC 14+).
-// Supports pipe syntax: range | ranges::to<Container>()
-// and direct syntax:  ranges::to<Container>(range)
-namespace _to_detail {
-template <class Container> struct full_t {
-    template <std::ranges::range R> friend Container operator|(R &&r, full_t) {
-        Container c;
-        for (auto &&e : r)
-            c.push_back(std::move(e));
-        return c;
-    }
-    template <std::ranges::range R> Container operator()(R &&r) const {
-        return std::forward<R>(r) | full_t{};
-    }
-};
-template <template <class...> class Container> struct tmpl_t {
-    template <std::ranges::range R> friend auto operator|(R &&r, tmpl_t) {
-        using T = std::ranges::range_value_t<std::remove_cvref_t<R>>;
-        Container<T> c;
-        for (auto &&e : r)
-            c.push_back(std::move(e));
-        return c;
-    }
-    template <std::ranges::range R> auto operator()(R &&r) const {
-        return std::forward<R>(r) | tmpl_t{};
-    }
-};
-} // namespace _to_detail
-
-template <class Container> auto to() { return _to_detail::full_t<Container>{}; }
-template <template <class...> class Container> auto to() { return _to_detail::tmpl_t<Container>{}; }
-template <class Container, std::ranges::range R> Container to(R &&r) {
-    return std::forward<R>(r) | _to_detail::full_t<Container>{};
-}
-template <template <class...> class Container, std::ranges::range R> auto to(R &&r) {
-    return std::forward<R>(r) | _to_detail::tmpl_t<Container>{};
-}
-} // namespace ranges
+namespace ranges = std::ranges;
 
 // Returns true for code points whose names are algorithmically derived and
 // must not be stored in the compressed dictionary.  These ranges appear as
@@ -293,10 +253,10 @@ void print_indexes(
 int main(int argc, const char *const *const argv) {
 
     const auto data = load_data(argv[1]);
-    auto names = data | ranges::views::transform([](const auto &p) {
-                     return character_name{p.first, p.second, {}, 0};
-                 }) |
-                 ranges::to<std::vector>();
+    auto names_view = data | ranges::views::transform([](const auto &p) {
+                          return character_name{p.first, p.second, {}, 0};
+                      });
+    std::vector<character_name> names(names_view.begin(), names_view.end());
 
     std::unordered_map<std::string_view, int> all_used;
     std::unordered_map<std::string_view, int, std::hash<std::string_view>> used_substrings;
@@ -316,7 +276,8 @@ int main(int argc, const char *const *const argv) {
         }
 
         const auto subs = [&incomplete] {
-            auto tmp = substrings(incomplete) | ranges::to<std::vector>();
+            auto tmp_view = substrings(incomplete);
+            std::vector<sub_entry> tmp(tmp_view.begin(), tmp_view.end());
             std::sort(tmp.begin(), tmp.end(),
                       [](const auto &a, const auto &b) { return a.size() > b.size(); });
             return tmp;
@@ -355,13 +316,14 @@ int main(int argc, const char *const *const argv) {
             std::string_view str;
             double weight;
         };
-        std::vector<weighted_sub> weighted_substrings =
+        auto weighted_substrings_view =
             used_substrings | ranges::views::filter([](const auto &p) { return p.second != 0; }) |
             ranges::views::transform([](const auto &p) {
                 const double d = p.first.size() < 5 ? 1.0 : double(p.second) * p.first.size();
                 return weighted_sub{p.first, d};
-            }) |
-            ranges::to<std::vector<weighted_sub>>();
+            });
+        std::vector<weighted_sub> weighted_substrings(weighted_substrings_view.begin(),
+                                                      weighted_substrings_view.end());
         fprint("Used Substrings : {}\n", weighted_substrings.size());
         const auto count = std::size_t(1 + 0.01 * double(weighted_substrings.size()));
         fprint("{}", count);
@@ -371,9 +333,9 @@ int main(int argc, const char *const *const argv) {
                           std::begin(weighted_substrings) + weighted_substrings_middle,
                           std::end(weighted_substrings),
                           [](const auto &a, const auto &b) { return a.weight > b.weight; });
-        auto filtered = weighted_substrings | ranges::views::take(count) |
-                        ranges::views::transform([](const weighted_sub &p) { return p.str; }) |
-                        ranges::to<std::vector<std::string_view>>();
+        auto filtered_view = weighted_substrings | ranges::views::take(count) |
+                             ranges::views::transform([](const weighted_sub &p) { return p.str; });
+        std::vector<std::string_view> filtered(filtered_view.begin(), filtered_view.end());
 
         const auto filtered_middle = std::min(std::ptrdiff_t(11), std::ptrdiff_t(filtered.size()));
         std::partial_sort(std::begin(filtered), std::begin(filtered) + filtered_middle,
@@ -421,7 +383,7 @@ int main(int argc, const char *const *const argv) {
                 blocks_by_size.push_back(b);
             else {
                 for (const auto &c : b.data | ranges::views::chunk(0xFE)) {
-                    const std::vector k = ranges::to<std::vector>(c);
+                    const std::vector k(c.begin(), c.end());
                     blocks_by_size.push_back(block{
                         b.elem_size, std::unordered_set<std::string_view>(k.begin(), k.end())});
                 }
