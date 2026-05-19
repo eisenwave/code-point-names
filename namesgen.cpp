@@ -386,10 +386,9 @@ int main(int argc, const char *const *const argv) {
                     auto common_chunk = c | ranges::views::common;
                     std::vector<std::string_view> chunk_elements(common_chunk.begin(),
                                                                  common_chunk.end());
-                    blocks_by_size.push_back(block{
-                        b.elem_size,
-                        std::unordered_set<std::string_view>(chunk_elements.begin(),
-                                                             chunk_elements.end())});
+                    blocks_by_size.push_back(
+                        block{b.elem_size, std::unordered_set<std::string_view>(
+                                               chunk_elements.begin(), chunk_elements.end())});
                 }
             }
         }

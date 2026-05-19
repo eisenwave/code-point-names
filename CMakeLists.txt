@@ -24,7 +24,7 @@ if(NOT EXISTS ${UCD_FILE})
     endif()
 endif()
 
-find_program(CLANG_FORMAT clang-format REQUIRED)
+find_program(CLANG_FORMAT NAMES clang-format-20 clang-format REQUIRED)
 
 # Code-generator: reads UnicodeData.txt, writes the compressed name tables.
 add_executable(namesgen namesgen.cpp)
