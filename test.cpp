@@ -14,14 +14,14 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char** argv) {
-    if(argc < 2) {
+int main(int argc, char **argv) {
+    if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <path/to/UnicodeData.txt>\n";
         return 1;
     }
 
     std::ifstream f(argv[1]);
-    if(!f) {
+    if (!f) {
         std::cerr << "Error: cannot open " << argv[1] << '\n';
         return 1;
     }
@@ -30,33 +30,33 @@ int main(int argc, char** argv) {
     int failed = 0;
     std::string line;
 
-    while(std::getline(f, line)) {
-        if(line.empty())
+    while (std::getline(f, line)) {
+        if (line.empty())
             continue;
 
         // Field 0: codepoint (hex)
         auto semi1 = line.find(';');
-        if(semi1 == std::string::npos)
+        if (semi1 == std::string::npos)
             continue;
 
         // Field 1: character name
         auto semi2 = line.find(';', semi1 + 1);
-        if(semi2 == std::string::npos)
+        if (semi2 == std::string::npos)
             semi2 = line.size();
 
         std::string_view name(line.data() + semi1 + 1, semi2 - semi1 - 1);
 
         // Names starting with '<' are range markers or formal-name-less entries.
-        if(name.empty() || name[0] == '<')
+        if (name.empty() || name[0] == '<')
             continue;
 
         uint32_t code = 0;
         auto [p, ec] = std::from_chars(line.data(), line.data() + semi1, code, 16);
-        if(ec != std::errc{})
+        if (ec != std::errc{})
             continue;
 
         const auto got = uni::cp_name(char32_t(code));
-        if(got != name) {
+        if (got != name) {
             std::cout << "FAIL U+" << std::string(line.data(), semi1) << "  expected='" << name
                       << "'  got='" << got << "'\n";
             ++failed;
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     // in UnicodeData.txt and are therefore not covered by the loop above.
     struct spot {
         char32_t cp;
-        const char* expected;
+        const char *expected;
     };
     constexpr spot spots[] = {
         {0xAC00, "HANGUL SYLLABLE GA"},
@@ -88,9 +88,9 @@ int main(int argc, char** argv) {
         {0xE0100, "VARIATION SELECTOR-17"},
         {0xE01EF, "VARIATION SELECTOR-256"},
     };
-    for(const auto& s : spots) {
+    for (const auto &s : spots) {
         const auto got = uni::cp_name(s.cp);
-        if(got != s.expected) {
+        if (got != s.expected) {
             std::cout << "SPOT-FAIL U+" << std::hex << uint32_t(s.cp) << "  expected='"
                       << s.expected << "'  got='" << got << "'\n";
             ++failed;
