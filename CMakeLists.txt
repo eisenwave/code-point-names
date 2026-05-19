@@ -1,119 +1,62 @@
 cmake_minimum_required(VERSION 3.18)
-include(cmake/vcpkg.cmake)
 project(cedilla VERSION 1.0)
 enable_testing()
-
-set(PY_VERSION 3.7)
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-set(Python_FIND_IMPLEMENTATIONS PyPy)
-find_package(Python3 COMPONENTS Interpreter)
-message("-- Found Python ${Python3_EXECUTABLE}")
-
-include(cmake/unicode_data.cmake)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-SET(HEADERS_DIR ${PROJECT_BINARY_DIR}/include/cedilla/)
+set(HEADERS_DIR ${CMAKE_BINARY_DIR}/include/cedilla)
+set(UCD_FILE    ${CMAKE_BINARY_DIR}/UnicodeData.txt)
 
-find_package(pugixml CONFIG REQUIRED)
-
-add_executable(namesgen tools/names.cpp)
-target_link_libraries(namesgen PRIVATE pugixml)
-target_compile_options(namesgen PRIVATE -march=native -fsanitize=address,undefined)
-target_link_options(namesgen PRIVATE -march=native -fsanitize=address,undefined)
-
-add_executable(namesreversegen tools/namesreverse.cpp)
-target_link_libraries(namesreversegen PRIVATE pugixml)
-target_compile_options(namesreversegen PRIVATE -march=native -fsanitize=address,undefined)
-target_link_options(namesreversegen PRIVATE -march=native -fsanitize=address,undefined)
-
-add_custom_command(
-    COMMENT "Generating Properties Header"
-    OUTPUT ${HEADERS_DIR}/properties.hpp
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMAND mkdir -p ${HEADERS_DIR}
-    COMMAND mkdir -p ${PROJECT_BINARY_DIR}/cedilla
-    COMMAND ${Python3_EXECUTABLE}
-      ${PROJECT_SOURCE_DIR}/tools/gen.py
-      ${PROJECT_BINARY_DIR}/cedilla/generated_props.hpp
-      ${PROJECT_BINARY_DIR}/cedilla/generated_props_extra.hpp
-      ${PROJECT_BINARY_DIR}/ucd/
-    COMMAND ${Python3_EXECUTABLE}
-                ${PROJECT_SOURCE_DIR}/tools/amalgamate.py
-                ${PROJECT_SOURCE_DIR}/src/all.hpp
-                -I ${PROJECT_BINARY_DIR}
-                -I ${PROJECT_SOURCE_DIR}/src/
-                ${HEADERS_DIR}/properties.hpp
-
-    COMMAND clang-format ${HEADERS_DIR}/properties.hpp -i
-
-    DEPENDS
-        ${PROJECT_SOURCE_DIR}/tools/amalgamate.py
-        ${PROJECT_SOURCE_DIR}/src/all.hpp
-        ${PROJECT_SOURCE_DIR}/src/cedilla/synopsys.h
-        ${PROJECT_SOURCE_DIR}/src/cedilla/base.h
-        ${PROJECT_SOURCE_DIR}/src/cedilla/unicode.h
-        ${PROJECT_SOURCE_DIR}/src/cedilla/regex.h
-        ${PROJECT_SOURCE_DIR}/tools/gen.py
-        ${PROJECT_BINARY_DIR}/ucd/14.0/ucd.nounihan.flat.xml
-        ${PROJECT_BINARY_DIR}/ucd/PropertyValueAliases.txt
-        ${PROJECT_BINARY_DIR}/ucd/14.0/emoji-data.txt
+# Download UnicodeData.txt into the build directory if absent.
+if(NOT EXISTS ${UCD_FILE})
+    message(STATUS "Downloading UnicodeData.txt for Unicode 14.0 ...")
+    file(DOWNLOAD
+        "https://unicode.org/Public/14.0.0/ucd/UnicodeData.txt"
+        "${UCD_FILE}"
+        SHOW_PROGRESS
+        STATUS _dl_status
     )
-
-add_custom_command(
-    COMMENT "Generating name_to_cp.hpp"
-    OUTPUT ${HEADERS_DIR}/name_to_cp.hpp
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMAND mkdir -p ${HEADERS_DIR}
-    COMMAND namesreversegen
-      ${PROJECT_BINARY_DIR}/ucd/14.0/ucd.nounihan.flat.xml > ${HEADERS_DIR}/name_to_cp.hpp
-    COMMAND cat ${PROJECT_SOURCE_DIR}/src/name_to_cp.hpp >> ${HEADERS_DIR}/name_to_cp.hpp
-    COMMAND clang-format ${HEADERS_DIR}/name_to_cp.hpp -i
-    DEPENDS
-        ${PROJECT_BINARY_DIR}/ucd/14.0/ucd.nounihan.flat.xml
-        ${PROJECT_SOURCE_DIR}/src/name_to_cp.hpp
-)
-
-add_custom_command(
-    COMMENT "Generating cp_to_name.hpp"
-    OUTPUT ${HEADERS_DIR}/cp_to_name.hpp
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMAND mkdir -p ${HEADERS_DIR}
-    COMMAND namesgen
-      ${PROJECT_BINARY_DIR}/ucd/14.0/ucd.nounihan.flat.xml ${HEADERS_DIR}/cp_to_name.hpp
-    COMMAND cat ${PROJECT_SOURCE_DIR}/src/names.hpp >> ${HEADERS_DIR}/cp_to_name.hpp
-    COMMAND clang-format ${HEADERS_DIR}/cp_to_name.hpp -i
-    DEPENDS
-        ${PROJECT_BINARY_DIR}/ucd/14.0/ucd.nounihan.flat.xml
-        ${PROJECT_SOURCE_DIR}/src/names.hpp
-        namesgen
-)
-
-add_library(std_ext_uni STATIC
-  ${HEADERS_DIR}/cp_to_name.hpp
-  ${HEADERS_DIR}/name_to_cp.hpp
-  ${HEADERS_DIR}/properties.hpp
-  src/unicode.cpp
-)
-
-add_custom_target("single-header")
-add_custom_command(TARGET "single-header"
-    COMMAND cp ${HEADERS_DIR}* ${PROJECT_SOURCE_DIR}/generated_includes/cedilla/
-    DEPENDS
-    include/cedilla/name_to_cp.hpp include/cedilla/cp_to_name.hpp
-    include/cedilla/properties.hpp
-)
-
-target_compile_options(std_ext_uni INTERFACE -std=c++17)
-
-if(MSVC)
-  target_compile_options(std_ext_uni INTERFACE /W4 /WX)
-else()
-  target_compile_options(std_ext_uni INTERFACE -Wall -Wextra -Werror)
+    list(GET _dl_status 0 _dl_err)
+    if(_dl_err)
+        message(FATAL_ERROR "Failed to download UnicodeData.txt: ${_dl_status}")
+    endif()
 endif()
 
-target_include_directories(std_ext_uni PUBLIC ${PROJECT_BINARY_DIR}/include/)
+find_program(CLANG_FORMAT clang-format REQUIRED)
 
-add_subdirectory(tests)
+# Code-generator: reads UnicodeData.txt, writes the compressed name tables.
+add_executable(namesgen namesgen.cpp)
+
+# Generate include/cedilla/cp_to_name.hpp in the build directory.
+# The file is: <compressed tables from namesgen> + <runtime lookup from src/names.hpp>
+add_custom_command(
+    COMMENT "Generating include/cedilla/cp_to_name.hpp"
+    OUTPUT  ${HEADERS_DIR}/cp_to_name.hpp
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
+    COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/cp_to_name.hpp
+    COMMAND ${CMAKE_COMMAND} -E cat
+            ${PROJECT_SOURCE_DIR}/src/names.hpp >> ${HEADERS_DIR}/cp_to_name.hpp
+    COMMAND ${CLANG_FORMAT} -i ${HEADERS_DIR}/cp_to_name.hpp
+    DEPENDS
+        ${UCD_FILE}
+        namesgen
+        ${PROJECT_SOURCE_DIR}/src/names.hpp
+)
+
+add_custom_target(gen_header DEPENDS ${HEADERS_DIR}/cp_to_name.hpp)
+
+# Header-only library wrapping cp_to_name.hpp
+add_library(cedilla INTERFACE)
+add_dependencies(cedilla gen_header)
+target_include_directories(cedilla INTERFACE ${CMAKE_BINARY_DIR}/include)
+
+add_executable(test_names test.cpp)
+add_dependencies(test_names gen_header)
+target_include_directories(test_names PRIVATE ${CMAKE_BINARY_DIR}/include)
+target_compile_features(test_names PRIVATE cxx_std_17)
+if(NOT MSVC)
+    target_compile_options(test_names PRIVATE -Wall -Wextra)
+endif()
+add_test(NAME test_names COMMAND test_names ${UCD_FILE})
