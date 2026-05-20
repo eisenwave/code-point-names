@@ -13,11 +13,27 @@ struct name_table_range {
     const unsigned long long *end;
 };
 
+struct alias_entry {
+    std::uint32_t cp;
+    std::string_view alias;
+};
+
 // These forward declarations are here so we can view this file without getting linter errors.
 extern const char name_dict[];                                               // NOLINT
 constexpr name_table_range get_table_index(std::size_t);                     // NOLINT
 extern const unsigned long long name_indexes[];                              // NOLINT
 constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // NOLINT
+// Forward declarations for auto-generated alias tables (linter only)
+extern const alias_entry alias_correction_table[];      // NOLINT
+extern const std::size_t alias_correction_table_size;   // NOLINT
+extern const alias_entry alias_control_table[];         // NOLINT
+extern const std::size_t alias_control_table_size;      // NOLINT
+extern const alias_entry alias_alternate_table[];       // NOLINT
+extern const std::size_t alias_alternate_table_size;    // NOLINT
+extern const alias_entry alias_figment_table[];         // NOLINT
+extern const std::size_t alias_figment_table_size;      // NOLINT
+extern const alias_entry alias_abbreviation_table[];    // NOLINT
+extern const std::size_t alias_abbreviation_table_size; // NOLINT
 
 inline constexpr char name_dict[] =
     "HEAVY DOUBLE TURNED COMMA QUOTATION MARK ORNAMENTBENT ARROW POINTING DOWNWARDS THEN NORTH "
@@ -12557,6 +12573,179 @@ inline constexpr name_table_range get_table_index(std::size_t index) {
     }
     return {nullptr, nullptr};
 }
+inline constexpr alias_entry alias_correction_table[] = {
+    {0x000001a2, "LATIN CAPITAL LETTER GHA"},
+    {0x000001a3, "LATIN SMALL LETTER GHA"},
+    {0x00000616, "ARABIC SMALL HIGH LIGATURE ALEF WITH YEH BARREE"},
+    {0x00000709, "SYRIAC SUBLINEAR COLON SKEWED LEFT"},
+    {0x00000cde, "KANNADA LETTER LLLA"},
+    {0x00000e9d, "LAO LETTER FO FON"},
+    {0x00000e9f, "LAO LETTER FO FAY"},
+    {0x00000ea3, "LAO LETTER RO"},
+    {0x00000ea5, "LAO LETTER LO"},
+    {0x00000fd0, "TIBETAN MARK BKA- SHOG GI MGO RGYAN"},
+    {0x000011ec, "HANGUL JONGSEONG YESIEUNG-KIYEOK"},
+    {0x000011ed, "HANGUL JONGSEONG YESIEUNG-SSANGKIYEOK"},
+    {0x000011ee, "HANGUL JONGSEONG SSANGYESIEUNG"},
+    {0x000011ef, "HANGUL JONGSEONG YESIEUNG-KHIEUKH"},
+    {0x00001bbd, "SUNDANESE LETTER ARCHAIC I"},
+    {0x00002118, "WEIERSTRASS ELLIPTIC FUNCTION"},
+    {0x00002448, "MICR ON US SYMBOL"},
+    {0x00002449, "MICR DASH SYMBOL"},
+    {0x00002b7a, "LEFTWARDS TRIANGLE-HEADED ARROW WITH DOUBLE VERTICAL STROKE"},
+    {0x00002b7c, "RIGHTWARDS TRIANGLE-HEADED ARROW WITH DOUBLE VERTICAL STROKE"},
+    {0x0000a015, "YI SYLLABLE ITERATION MARK"},
+    {0x0000aa6e, "MYANMAR LETTER KHAMTI LLA"},
+    {0x0000fe18, "PRESENTATION FORM FOR VERTICAL RIGHT WHITE LENTICULAR BRACKET"},
+    {0x000122d4, "CUNEIFORM SIGN NU11 TENU"},
+    {0x000122d5, "CUNEIFORM SIGN NU11 OVER NU11 BUR OVER BUR"},
+    {0x00012327, "CUNEIFORM SIGN KALAM"},
+    {0x0001680b, "BAMUM LETTER PHASE-A MAEMGBIEE"},
+    {0x00016881, "BAMUM LETTER PHASE-B PUNGGAAM"},
+    {0x0001688e, "BAMUM LETTER PHASE-B NGGOM"},
+    {0x000168dc, "BAMUM LETTER PHASE-C SHETFON"},
+    {0x0001697d, "BAMUM LETTER PHASE-E NGGOP"},
+    {0x00016e56, "MEDEFAIDRIN CAPITAL LETTER H"},
+    {0x00016e57, "MEDEFAIDRIN CAPITAL LETTER NG"},
+    {0x00016e76, "MEDEFAIDRIN SMALL LETTER H"},
+    {0x00016e77, "MEDEFAIDRIN SMALL LETTER NG"},
+    {0x0001b001, "HENTAIGANA LETTER E-1"},
+    {0x0001d0c5, "BYZANTINE MUSICAL SYMBOL FTHORA SKLIRON CHROMA VASIS"},
+    {0x0001e899, "MENDE KIKAKUI SYLLABLE M172 MBO"},
+    {0x0001e89a, "MENDE KIKAKUI SYLLABLE M174 MBOO"},
+};
+inline constexpr std::size_t alias_correction_table_size =
+    sizeof(alias_correction_table) / sizeof(alias_entry);
+inline constexpr alias_entry alias_control_table[] = {
+    {0x00000000, "NULL"},
+    {0x00000001, "START OF HEADING"},
+    {0x00000002, "START OF TEXT"},
+    {0x00000003, "END OF TEXT"},
+    {0x00000004, "END OF TRANSMISSION"},
+    {0x00000005, "ENQUIRY"},
+    {0x00000006, "ACKNOWLEDGE"},
+    {0x00000007, "ALERT"},
+    {0x00000008, "BACKSPACE"},
+    {0x00000009, "CHARACTER TABULATION,HORIZONTAL TABULATION"},
+    {0x0000000a, "LINE FEED,NEW LINE,END OF LINE"},
+    {0x0000000b, "LINE TABULATION,VERTICAL TABULATION"},
+    {0x0000000c, "FORM FEED"},
+    {0x0000000d, "CARRIAGE RETURN"},
+    {0x0000000e, "SHIFT OUT,LOCKING-SHIFT ONE"},
+    {0x0000000f, "SHIFT IN,LOCKING-SHIFT ZERO"},
+    {0x00000010, "DATA LINK ESCAPE"},
+    {0x00000011, "DEVICE CONTROL ONE"},
+    {0x00000012, "DEVICE CONTROL TWO"},
+    {0x00000013, "DEVICE CONTROL THREE"},
+    {0x00000014, "DEVICE CONTROL FOUR"},
+    {0x00000015, "NEGATIVE ACKNOWLEDGE"},
+    {0x00000016, "SYNCHRONOUS IDLE"},
+    {0x00000017, "END OF TRANSMISSION BLOCK"},
+    {0x00000018, "CANCEL"},
+    {0x00000019, "END OF MEDIUM"},
+    {0x0000001a, "SUBSTITUTE"},
+    {0x0000001b, "ESCAPE"},
+    {0x0000001c, "INFORMATION SEPARATOR FOUR,FILE SEPARATOR"},
+    {0x0000001d, "INFORMATION SEPARATOR THREE,GROUP SEPARATOR"},
+    {0x0000001e, "INFORMATION SEPARATOR TWO,RECORD SEPARATOR"},
+    {0x0000001f, "INFORMATION SEPARATOR ONE,UNIT SEPARATOR"},
+    {0x0000007f, "DELETE"},
+    {0x00000082, "BREAK PERMITTED HERE"},
+    {0x00000083, "NO BREAK HERE"},
+    {0x00000084, "INDEX"},
+    {0x00000085, "NEXT LINE"},
+    {0x00000086, "START OF SELECTED AREA"},
+    {0x00000087, "END OF SELECTED AREA"},
+    {0x00000088, "CHARACTER TABULATION SET,HORIZONTAL TABULATION SET"},
+    {0x00000089,
+     "CHARACTER TABULATION WITH JUSTIFICATION,HORIZONTAL TABULATION WITH JUSTIFICATION"},
+    {0x0000008a, "LINE TABULATION SET,VERTICAL TABULATION SET"},
+    {0x0000008b, "PARTIAL LINE FORWARD,PARTIAL LINE DOWN"},
+    {0x0000008c, "PARTIAL LINE BACKWARD,PARTIAL LINE UP"},
+    {0x0000008d, "REVERSE LINE FEED,REVERSE INDEX"},
+    {0x0000008e, "SINGLE SHIFT TWO,SINGLE-SHIFT-2"},
+    {0x0000008f, "SINGLE SHIFT THREE,SINGLE-SHIFT-3"},
+    {0x00000090, "DEVICE CONTROL STRING"},
+    {0x00000091, "PRIVATE USE ONE,PRIVATE USE-1"},
+    {0x00000092, "PRIVATE USE TWO,PRIVATE USE-2"},
+    {0x00000093, "SET TRANSMIT STATE"},
+    {0x00000094, "CANCEL CHARACTER"},
+    {0x00000095, "MESSAGE WAITING"},
+    {0x00000096, "START OF GUARDED AREA,START OF PROTECTED AREA"},
+    {0x00000097, "END OF GUARDED AREA,END OF PROTECTED AREA"},
+    {0x00000098, "START OF STRING"},
+    {0x0000009a, "SINGLE CHARACTER INTRODUCER"},
+    {0x0000009b, "CONTROL SEQUENCE INTRODUCER"},
+    {0x0000009c, "STRING TERMINATOR"},
+    {0x0000009d, "OPERATING SYSTEM COMMAND"},
+    {0x0000009e, "PRIVACY MESSAGE"},
+    {0x0000009f, "APPLICATION PROGRAM COMMAND"},
+};
+inline constexpr std::size_t alias_control_table_size =
+    sizeof(alias_control_table) / sizeof(alias_entry);
+inline constexpr alias_entry alias_alternate_table[] = {
+    {0x0000feff, "BYTE ORDER MARK"},
+};
+inline constexpr std::size_t alias_alternate_table_size =
+    sizeof(alias_alternate_table) / sizeof(alias_entry);
+inline constexpr alias_entry alias_figment_table[] = {
+    {0x00000080, "PADDING CHARACTER"},
+    {0x00000081, "HIGH OCTET PRESET"},
+    {0x00000099, "SINGLE GRAPHIC CHARACTER INTRODUCER"},
+};
+inline constexpr std::size_t alias_figment_table_size =
+    sizeof(alias_figment_table) / sizeof(alias_entry);
+inline constexpr alias_entry alias_abbreviation_table[] = {
+    {0x00000000, "NUL"},    {0x00000001, "SOH"},       {0x00000002, "STX"},
+    {0x00000003, "ETX"},    {0x00000004, "EOT"},       {0x00000005, "ENQ"},
+    {0x00000006, "ACK"},    {0x00000007, "BEL"},       {0x00000008, "BS"},
+    {0x00000009, "HT,TAB"}, {0x0000000a, "LF,NL,EOL"}, {0x0000000b, "VT"},
+    {0x0000000c, "FF"},     {0x0000000d, "CR"},        {0x0000000e, "SO"},
+    {0x0000000f, "SI"},     {0x00000010, "DLE"},       {0x00000011, "DC1"},
+    {0x00000012, "DC2"},    {0x00000013, "DC3"},       {0x00000014, "DC4"},
+    {0x00000015, "NAK"},    {0x00000016, "SYN"},       {0x00000017, "ETB"},
+    {0x00000018, "CAN"},    {0x00000019, "EOM,EM"},    {0x0000001a, "SUB"},
+    {0x0000001b, "ESC"},    {0x0000001c, "FS"},        {0x0000001d, "GS"},
+    {0x0000001e, "RS"},     {0x0000001f, "US"},        {0x00000020, "SP"},
+    {0x0000007f, "DEL"},    {0x00000080, "PAD"},       {0x00000081, "HOP"},
+    {0x00000082, "BPH"},    {0x00000083, "NBH"},       {0x00000084, "IND"},
+    {0x00000085, "NEL"},    {0x00000086, "SSA"},       {0x00000087, "ESA"},
+    {0x00000088, "HTS"},    {0x00000089, "HTJ"},       {0x0000008a, "VTS"},
+    {0x0000008b, "PLD"},    {0x0000008c, "PLU"},       {0x0000008d, "RI"},
+    {0x0000008e, "SS2"},    {0x0000008f, "SS3"},       {0x00000090, "DCS"},
+    {0x00000091, "PU1"},    {0x00000092, "PU2"},       {0x00000093, "STS"},
+    {0x00000094, "CCH"},    {0x00000095, "MW"},        {0x00000096, "SPA"},
+    {0x00000097, "EPA"},    {0x00000098, "SOS"},       {0x00000099, "SGC"},
+    {0x0000009a, "SCI"},    {0x0000009b, "CSI"},       {0x0000009c, "ST"},
+    {0x0000009d, "OSC"},    {0x0000009e, "PM"},        {0x0000009f, "APC"},
+    {0x000000a0, "NBSP"},   {0x000000ad, "SHY"},       {0x0000034f, "CGJ"},
+    {0x0000061c, "ALM"},    {0x0000180b, "FVS1"},      {0x0000180c, "FVS2"},
+    {0x0000180d, "FVS3"},   {0x0000180e, "MVS"},       {0x0000180f, "FVS4"},
+    {0x0000200b, "ZWSP"},   {0x0000200c, "ZWNJ"},      {0x0000200d, "ZWJ"},
+    {0x0000200e, "LRM"},    {0x0000200f, "RLM"},       {0x0000202a, "LRE"},
+    {0x0000202b, "RLE"},    {0x0000202c, "PDF"},       {0x0000202d, "LRO"},
+    {0x0000202e, "RLO"},    {0x0000202f, "NNBSP"},     {0x0000205f, "MMSP"},
+    {0x00002060, "WJ"},     {0x00002066, "LRI"},       {0x00002067, "RLI"},
+    {0x00002068, "FSI"},    {0x00002069, "PDI"},       {0x0000feff, "BOM,ZWNBSP"},
+};
+inline constexpr std::size_t alias_abbreviation_table_size =
+    sizeof(alias_abbreviation_table) / sizeof(alias_entry);
+
+[[nodiscard]] constexpr std::string_view
+find_alias(const alias_entry *const table, const std::size_t n, const char32_t cp) noexcept {
+    std::size_t lo = 0, hi = n;
+    while (lo < hi) {
+        const std::size_t mid = lo + (hi - lo) / 2;
+        if (table[mid].cp < std::uint32_t(cp)) {
+            lo = mid + 1;
+        } else if (table[mid].cp > std::uint32_t(cp)) {
+            hi = mid;
+        } else {
+            return table[mid].alias;
+        }
+    }
+    return {};
+}
 
 [[nodiscard]] constexpr const unsigned long long *upper_bound(const unsigned long long *first,
                                                               const unsigned long long *const last,
@@ -12572,8 +12761,9 @@ inline constexpr name_table_range get_table_index(std::size_t index) {
         if (value >= std::uint32_t(*it >> 32)) {
             first = ++it;
             count -= step + 1;
-        } else
+        } else {
             count = step;
+        }
     }
     return first;
 }
@@ -12829,6 +13019,85 @@ inline constexpr std::size_t max_length = 96;
     // Compressed dictionary lookup
     details::name_view(cp).write_to(out, length);
     return length;
+}
+
+[[nodiscard]] inline std::size_t get_code_point_correction_alias(const char32_t cp,
+                                                                 char *const out) noexcept {
+    const std::string_view alias = details::find_alias(details::alias_correction_table,
+                                                       details::alias_correction_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_control_alias(const char32_t cp,
+                                                              char *const out) noexcept {
+    const std::string_view alias =
+        details::find_alias(details::alias_control_table, details::alias_control_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_alternate_alias(const char32_t cp,
+                                                                char *const out) noexcept {
+    const std::string_view alias = details::find_alias(details::alias_alternate_table,
+                                                       details::alias_alternate_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_figment_alias(const char32_t cp,
+                                                              char *const out) noexcept {
+    const std::string_view alias =
+        details::find_alias(details::alias_figment_table, details::alias_figment_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_abbreviation_alias(const char32_t cp,
+                                                                   char *const out) noexcept {
+    // VS1–VS16: U+FE00–U+FE0F
+    if (cp >= 0xFE00u && cp <= 0xFE0Fu) {
+        const std::uint32_t n = std::uint32_t(cp) - 0xFE00u + 1u;
+        out[0] = 'V';
+        out[1] = 'S';
+        return 2u + details::format_decimal_zero_padded(n, 1, out + 2);
+    }
+    // VS17–VS256: U+E0100–U+E01EF
+    if (cp >= 0xE0100u && cp <= 0xE01EFu) {
+        const std::uint32_t n = std::uint32_t(cp) - 0xE0100u + 17u;
+        out[0] = 'V';
+        out[1] = 'S';
+        return 2u + details::format_decimal_zero_padded(n, 1, out + 2);
+    }
+    const std::string_view alias = details::find_alias(details::alias_abbreviation_table,
+                                                       details::alias_abbreviation_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
 }
 
 } // namespace get_code_point_name
