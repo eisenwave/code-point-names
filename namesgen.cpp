@@ -110,6 +110,72 @@ template <class... Args> static void fprint(std::format_string<Args...> fmt, Arg
     return characters;
 }
 
+// Parse NameAliases.txt for a single alias type (e.g. "correction", "control", "abbreviation").
+// Returns entries sorted by code point, keeping only the first alias per code point.
+// Variation-selector abbreviations (U+FE00-U+FE0F and U+E0100-U+E01EF) are excluded from the
+// "abbreviation" type; they are handled algorithmically at runtime.
+[[nodiscard]] std::vector<std::pair<char32_t, std::string>>
+load_aliases(const std::string &path, const std::string_view type) {
+    std::ifstream f(path);
+    if (!f) {
+        fprintf(stderr, "Error: cannot open %s\n", path.c_str());
+        return {};
+    }
+    std::unordered_map<char32_t, std::string> seen;
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+        const auto semi1 = line.find(';');
+        if (semi1 == std::string::npos) {
+            continue;
+        }
+        const auto semi2 = line.find(';', semi1 + 1);
+        if (semi2 == std::string::npos) {
+            continue;
+        }
+        const std::string_view line_type(line.data() + semi2 + 1, line.size() - semi2 - 1);
+        if (line_type != type) {
+            continue;
+        }
+        std::uint32_t cp = 0;
+        const auto [p, ec] = std::from_chars(line.data(), line.data() + semi1, cp, 16);
+        if (ec != std::errc{}) {
+            continue;
+        }
+        // Exclude variation selectors — resolved algorithmically in
+        // get_code_point_abbreviation_alias.
+        if (type == "abbreviation") {
+            if ((cp >= 0xFE00u && cp <= 0xFE0Fu) || (cp >= 0xE0100u && cp <= 0xE01EFu)) {
+                continue;
+            }
+        }
+        const std::string alias(line.data() + semi1 + 1, semi2 - semi1 - 1);
+        auto [it, inserted] = seen.try_emplace(char32_t(cp), alias);
+        if (!inserted) {
+            it->second += ',';
+            it->second += alias;
+        }
+    }
+    std::vector<std::pair<char32_t, std::string>> result(seen.begin(), seen.end());
+    std::sort(result.begin(), result.end(),
+              [](const auto &a, const auto &b) { return a.first < b.first; });
+    return result;
+}
+
+void print_alias_table(std::FILE *const f,
+                       const std::vector<std::pair<char32_t, std::string>> &table,
+                       const std::string_view table_name) {
+    fprint(f, "inline constexpr alias_entry {}[] = {{", table_name);
+    for (const auto &[cp, alias] : table) {
+        fprint(f, "{{{:#010x},\"{}\"}},", std::uint32_t(cp), alias);
+    }
+    fprint(f, "}};\n");
+    fprint(f, "inline constexpr std::size_t {0}_size = sizeof({0}) / sizeof(alias_entry);\n",
+           table_name);
+}
+
 struct substring_entry {
     std::size_t pos;
     std::string_view str;
@@ -519,6 +585,13 @@ int main(int argc, const char *const *const argv) {
         }
         print_indexes(f, mapping);
     }
+
+    // Alias tables for all five NameAliases.txt categories.
+    print_alias_table(f, load_aliases(argv[3], "correction"), "alias_correction_table");
+    print_alias_table(f, load_aliases(argv[3], "control"), "alias_control_table");
+    print_alias_table(f, load_aliases(argv[3], "alternate"), "alias_alternate_table");
+    print_alias_table(f, load_aliases(argv[3], "figment"), "alias_figment_table");
+    print_alias_table(f, load_aliases(argv[3], "abbreviation"), "alias_abbreviation_table");
 
     fclose(f);
 }

@@ -20,5 +20,9 @@ jobs:
 
       - name: Download UnicodeData.txt
         run: |
-          curl -fL "https://unicode.org/Public/14.0.0/ucd/UnicodeData.txt" \
+          curl -fL "https://unicode.org/Public/17.0.0/ucd/UnicodeData.txt" \
                -o build/UnicodeData.txt
+      - name: Download NameAliases.txt
+        run: |
+          curl -fL "https://unicode.org/Public/17.0.0/ucd/NameAliases.txt" \
+               -o build/NameAliases.txt

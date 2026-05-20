@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.18)
 project(get_code_point_name VERSION 1.0)
 
 # Per-project binary dir so FetchContent consumers don't have their tree polluted.
-set(HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-set(UCD_FILE    ${CMAKE_CURRENT_BINARY_DIR}/UnicodeData.txt)
+set(HEADERS_DIR  ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(UCD_FILE     ${CMAKE_CURRENT_BINARY_DIR}/UnicodeData.txt)
+set(ALIASES_FILE ${CMAKE_CURRENT_BINARY_DIR}/NameAliases.txt)
 
 # Only enable testing and require clang-format when this is the top-level build.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -26,6 +27,21 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT EXISTS ${UCD_FILE}
     list(GET _dl_status 0 _dl_err)
     if(_dl_err)
         message(FATAL_ERROR "Failed to download UnicodeData.txt: ${_dl_status}")
+    endif()
+endif()
+
+# Download NameAliases.txt into the build directory if absent.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT EXISTS ${ALIASES_FILE})
+    message(STATUS "Downloading NameAliases.txt ...")
+    file(DOWNLOAD
+        "https://unicode.org/Public/17.0.0/ucd/NameAliases.txt"
+        "${ALIASES_FILE}"
+        SHOW_PROGRESS
+        STATUS _dl_status
+    )
+    list(GET _dl_status 0 _dl_err)
+    if(_dl_err)
+        message(FATAL_ERROR "Failed to download NameAliases.txt: ${_dl_status}")
     endif()
 endif()
 
@@ -58,7 +74,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         COMMENT "Generating include/get_code_point_name.hpp"
         OUTPUT  ${HEADERS_DIR}/get_code_point_name.hpp
         COMMAND ${CMAKE_COMMAND} -E make_directory ${HEADERS_DIR}
-        COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/get_code_point_name.gen
+        COMMAND namesgen ${UCD_FILE} ${HEADERS_DIR}/get_code_point_name.gen ${ALIASES_FILE}
         COMMAND ${CMAKE_COMMAND}
                 -DTEMPLATE=${PROJECT_SOURCE_DIR}/names.hpp
                 -DINSERT=${HEADERS_DIR}/get_code_point_name.gen
@@ -71,6 +87,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
                 ${PROJECT_SOURCE_DIR}/include/get_code_point_name.hpp
         DEPENDS
             ${UCD_FILE}
+            ${ALIASES_FILE}
             namesgen
             ${PROJECT_SOURCE_DIR}/names.hpp
             ${PROJECT_SOURCE_DIR}/cmake/splice.cmake
@@ -91,7 +108,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     if(NOT MSVC)
         target_compile_options(test_names PRIVATE -Wall -Wextra)
     endif()
-    add_test(NAME test_names COMMAND test_names ${UCD_FILE})
+    add_test(NAME test_names COMMAND test_names ${UCD_FILE} ${ALIASES_FILE})
 else()
     # Subdirectory / FetchContent consumer: use the pre-committed header directly.
     # No code generation, no namesgen build.

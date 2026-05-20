@@ -13,13 +13,45 @@ struct name_table_range {
     const unsigned long long *end;
 };
 
+struct alias_entry {
+    std::uint32_t cp;
+    std::string_view alias;
+};
+
 // These forward declarations are here so we can view this file without getting linter errors.
 extern const char name_dict[];                                               // NOLINT
 constexpr name_table_range get_table_index(std::size_t);                     // NOLINT
 extern const unsigned long long name_indexes[];                              // NOLINT
 constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // NOLINT
+// Forward declarations for auto-generated alias tables (linter only)
+extern const alias_entry alias_correction_table[];      // NOLINT
+extern const std::size_t alias_correction_table_size;   // NOLINT
+extern const alias_entry alias_control_table[];         // NOLINT
+extern const std::size_t alias_control_table_size;      // NOLINT
+extern const alias_entry alias_alternate_table[];       // NOLINT
+extern const std::size_t alias_alternate_table_size;    // NOLINT
+extern const alias_entry alias_figment_table[];         // NOLINT
+extern const std::size_t alias_figment_table_size;      // NOLINT
+extern const alias_entry alias_abbreviation_table[];    // NOLINT
+extern const std::size_t alias_abbreviation_table_size; // NOLINT
 
 // AUTO-GENERATED CODE HERE
+
+[[nodiscard]] constexpr std::string_view
+find_alias(const alias_entry *const table, const std::size_t n, const char32_t cp) noexcept {
+    std::size_t lo = 0, hi = n;
+    while (lo < hi) {
+        const std::size_t mid = lo + (hi - lo) / 2;
+        if (table[mid].cp < std::uint32_t(cp)) {
+            lo = mid + 1;
+        } else if (table[mid].cp > std::uint32_t(cp)) {
+            hi = mid;
+        } else {
+            return table[mid].alias;
+        }
+    }
+    return {};
+}
 
 [[nodiscard]] constexpr const unsigned long long *upper_bound(const unsigned long long *first,
                                                               const unsigned long long *const last,
@@ -35,8 +67,9 @@ constexpr std::string_view get_name_segment(std::size_t b, std::size_t idx); // 
         if (value >= std::uint32_t(*it >> 32)) {
             first = ++it;
             count -= step + 1;
-        } else
+        } else {
             count = step;
+        }
     }
     return first;
 }
@@ -292,6 +325,85 @@ inline constexpr std::size_t max_length = 96;
     // Compressed dictionary lookup
     details::name_view(cp).write_to(out, length);
     return length;
+}
+
+[[nodiscard]] inline std::size_t get_code_point_correction_alias(const char32_t cp,
+                                                                 char *const out) noexcept {
+    const std::string_view alias = details::find_alias(details::alias_correction_table,
+                                                       details::alias_correction_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_control_alias(const char32_t cp,
+                                                              char *const out) noexcept {
+    const std::string_view alias =
+        details::find_alias(details::alias_control_table, details::alias_control_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_alternate_alias(const char32_t cp,
+                                                                char *const out) noexcept {
+    const std::string_view alias = details::find_alias(details::alias_alternate_table,
+                                                       details::alias_alternate_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_figment_alias(const char32_t cp,
+                                                              char *const out) noexcept {
+    const std::string_view alias =
+        details::find_alias(details::alias_figment_table, details::alias_figment_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
+}
+
+[[nodiscard]] inline std::size_t get_code_point_abbreviation_alias(const char32_t cp,
+                                                                   char *const out) noexcept {
+    // VS1–VS16: U+FE00–U+FE0F
+    if (cp >= 0xFE00u && cp <= 0xFE0Fu) {
+        const std::uint32_t n = std::uint32_t(cp) - 0xFE00u + 1u;
+        out[0] = 'V';
+        out[1] = 'S';
+        return 2u + details::format_decimal_zero_padded(n, 1, out + 2);
+    }
+    // VS17–VS256: U+E0100–U+E01EF
+    if (cp >= 0xE0100u && cp <= 0xE01EFu) {
+        const std::uint32_t n = std::uint32_t(cp) - 0xE0100u + 17u;
+        out[0] = 'V';
+        out[1] = 'S';
+        return 2u + details::format_decimal_zero_padded(n, 1, out + 2);
+    }
+    const std::string_view alias = details::find_alias(details::alias_abbreviation_table,
+                                                       details::alias_abbreviation_table_size, cp);
+    if (alias.empty()) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < alias.size(); ++i) {
+        out[i] = alias[i];
+    }
+    return alias.size();
 }
 
 } // namespace get_code_point_name
